@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Activity } from 'lucide-react';
+import { Activity, User } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Button } from './ui/Button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export default function Navbar() {
+export default function DashboardNavbar() {
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -14,7 +14,7 @@ export default function Navbar() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 sm:h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/dashboard" className="flex items-center space-x-2">
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
@@ -24,19 +24,18 @@ export default function Navbar() {
             <span className="text-base sm:text-lg font-bold text-foreground">FitTracker</span>
           </Link>
 
-          {/* Auth Buttons */}
-          <div className="flex items-center space-x-3">
-            <Link to="/login">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" size="sm">Login</Button>
-              </motion.div>
-            </Link>
-            <Link to="/register">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="sm">Get Started</Button>
-              </motion.div>
-            </Link>
-          </div>
+          {/* User Profile */}
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
+              <AvatarImage src="" alt="User" />
+              <AvatarFallback className="bg-primary/10">
+                <User className="h-5 w-5 text-primary" />
+              </AvatarFallback>
+            </Avatar>
+          </motion.div>
         </div>
       </div>
     </motion.nav>
