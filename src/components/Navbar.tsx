@@ -1,9 +1,10 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from './ui/Button';
 
 export default function Navbar() {
+  const navigate = useNavigate();
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -26,16 +27,23 @@ export default function Navbar() {
 
           {/* Auth Buttons */}
           <div className="flex items-center space-x-3">
-            <Link to="/login">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button variant="ghost" size="sm">Login</Button>
-              </motion.div>
-            </Link>
-            <Link to="/register">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button size="sm">Get Started</Button>
-              </motion.div>
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/login')}
+              >
+                Login
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                size="sm"
+                onClick={() => navigate('/register')}
+              >
+                Get Started
+              </Button>
+            </motion.div>
           </div>
         </div>
       </div>

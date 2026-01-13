@@ -12,6 +12,8 @@ import GoalsPage from '@/pages/GoalsPage';
 import ActivityLevelPage from '@/pages/ActivityLevelPage';
 import PersonalInfoPage from '@/pages/PersonalInfoPage';
 import MeasurementsPage from '@/pages/MeasurementsPage';
+import ResultsPage from '@/pages/ResultsPage';
+import DailyMealsPage from '@/pages/DailyMealsPage';
 
 function App() {
   return (
@@ -111,6 +113,26 @@ function App() {
           element={
             <DashboardLayout>
               <MeasurementsPage />
+            </DashboardLayout>
+          }
+        />
+
+        {/* Results */}
+        <Route
+          path="/results"
+          element={
+            <DashboardLayout>
+              <ResultsPage />
+            </DashboardLayout>
+          }
+        />
+
+        {/* Daily Meals */}
+        <Route
+          path="/daily-meals"
+          element={
+            <DashboardLayout>
+              <DailyMealsPage />
             </DashboardLayout>
           }
         />

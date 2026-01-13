@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col pb-20 sm:pb-0">
       <DashboardNavbar />
       <AnimatePresence mode="wait">
         <motion.main

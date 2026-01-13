@@ -1,10 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp, Zap, Target, BarChart, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 
 export default function HeroPage() {
+  const navigate = useNavigate();
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -112,16 +113,21 @@ export default function HeroPage() {
               variants={itemVariants}
               className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-8 sm:mb-10 lg:mb-12 px-4"
             >
-              <Link to="/register" className="w-full sm:w-auto">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Get Started Free
-                </Button>
-              </Link>
-              <Link to="/features" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                  Learn More
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                className="w-full sm:w-auto"
+                onClick={() => navigate('/register')}
+              >
+                Get Started Free
+              </Button>
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="w-full sm:w-auto"
+                onClick={() => navigate('/welcome')}
+              >
+                Learn More
+              </Button>
             </motion.div>
             
             <motion.p variants={itemVariants} className="text-xs sm:text-sm text-muted-foreground px-4">

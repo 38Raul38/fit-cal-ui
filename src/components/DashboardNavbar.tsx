@@ -1,9 +1,13 @@
-import { Link } from 'react-router-dom';
-import { Activity, User } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Home, BarChart3, Settings, Activity, Flame, UtensilsCrossed } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function DashboardNavbar() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
+
   return (
     <motion.nav
       initial={{ y: -100 }}
@@ -14,28 +18,143 @@ export default function DashboardNavbar() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 sm:h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <motion.div
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
             >
-              <Activity className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
+              <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             </motion.div>
-            <span className="text-base sm:text-lg font-bold text-foreground">FitTracker</span>
-          </Link>
+            <span className="text-xl sm:text-2xl font-bold">FitCal</span>
+          </div>
 
-          {/* User Profile */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+          {/* Desktop Navigation */}
+          <div className="hidden sm:flex items-center gap-1">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/dashboard')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <Home className="h-5 w-5" />
+              <span className="font-medium">Home</span>
+            </button>
+            <button
+              onClick={() => navigate('/daily-meals')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/daily-meals')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <UtensilsCrossed className="h-5 w-5" />
+              <span className="font-medium">Meals</span>
+            </button>
+            <button
+              onClick={() => navigate('/analytics')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/analytics')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <BarChart3 className="h-5 w-5" />
+              <span className="font-medium">Analytics</span>
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                isActive('/settings')
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              <Settings className="h-5 w-5" />
+              <span className="font-medium">Settings</span>
+            </button>
+          </div>
+
+          {/* Streak Counter */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 rounded-full">
+            <Flame className="h-4 w-4 text-orange-500" />
+            <span className="text-sm font-semibold">0</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border pb-safe">
+        <div className="flex items-center justify-around px-4 py-3">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex flex-col items-center gap-1 min-w-[60px]"
           >
-            <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-transparent hover:ring-primary/50 transition-all">
-              <AvatarImage src="" alt="User" />
-              <AvatarFallback className="bg-primary/10">
-                <User className="h-5 w-5 text-primary" />
-              </AvatarFallback>
-            </Avatar>
-          </motion.div>
+            <Home
+              className={`h-6 w-6 ${
+                isActive('/dashboard') ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isActive('/dashboard') ? 'text-foreground font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              Home
+            </span>
+          </button>
+          <button
+            onClick={() => navigate('/daily-meals')}
+            className="flex flex-col items-center gap-1 min-w-[60px]"
+          >
+            <UtensilsCrossed
+              className={`h-6 w-6 ${
+                isActive('/daily-meals') ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isActive('/daily-meals') ? 'text-foreground font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              Meals
+            </span>
+          </button>
+          <button
+            onClick={() => navigate('/analytics')}
+            className="flex flex-col items-center gap-1 min-w-[60px]"
+          >
+            <BarChart3
+              className={`h-6 w-6 ${
+                isActive('/analytics') ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isActive('/analytics') ? 'text-foreground font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              Analytics
+            </span>
+          </button>
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex flex-col items-center gap-1 min-w-[60px]"
+          >
+            <Settings
+              className={`h-6 w-6 ${
+                isActive('/settings') ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+            />
+            <span
+              className={`text-xs ${
+                isActive('/settings') ? 'text-foreground font-medium' : 'text-muted-foreground'
+              }`}
+            >
+              Settings
+            </span>
+          </button>
         </div>
       </div>
     </motion.nav>

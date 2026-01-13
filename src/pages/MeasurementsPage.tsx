@@ -86,7 +86,7 @@ export default function MeasurementsPage() {
 
   const handleNext = () => {
     console.log('Measurements:', { heightUnit, weightUnit, heightFeet, heightInches, heightCm, currentWeight, goalWeight });
-    // Navigate to next step
+    navigate('/results');
   };
 
   const isValid = () => {

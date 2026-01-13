@@ -48,20 +48,20 @@ export default function WelcomePage() {
   const welcomeCards = [
     {
       icon: Activity,
-      title: 'Готовы к победам?',
-      description: 'Начните отслеживать питание. Это так просто!',
+      title: 'Ready to Win?',
+      description: 'Start tracking your nutrition. It\'s that simple!',
       gradient: 'from-blue-500/20 to-cyan-500/20',
     },
     {
       icon: Apple,
-      title: 'Вы узнаете, как еда и фитнес влияют на здоровье',
-      description: 'Отслеживайте калории, макронутриенты и достигайте целей',
+      title: 'Discover How Food and Fitness Impact Your Health',
+      description: 'Track calories, macros and reach your goals',
       gradient: 'from-green-500/20 to-emerald-500/20',
     },
     {
       icon: TrendingUp,
-      title: 'И сформируете привычку питаться осознанно',
-      description: 'Получайте персонализированные рекомендации и советы',
+      title: 'Build Mindful Eating Habits',
+      description: 'Get personalized recommendations and tips',
       gradient: 'from-purple-500/20 to-pink-500/20',
     },
   ];
