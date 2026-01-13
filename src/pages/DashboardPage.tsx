@@ -2,12 +2,34 @@ import { useState } from 'react';
 import { Flame, Apple, Wheat, Droplet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 
+interface DayData {
+  caloriesLeft: number;
+  totalCalories: number;
+  proteinLeft: number;
+  carbsLeft: number;
+  fatLeft: number;
+}
+
 export default function DashboardPage() {
-  const [caloriesLeft] = useState(1000);
-  const [totalCalories] = useState(2400);
-  const [proteinLeft] = useState(100);
-  const [carbsLeft] = useState(99);
-  const [fatLeft] = useState(25);
+  const [selectedDay, setSelectedDay] = useState(6);
+  
+  // Mock data for different days
+  const dayData: { [key: number]: DayData } = {
+    1: { caloriesLeft: 1800, totalCalories: 2400, proteinLeft: 120, carbsLeft: 150, fatLeft: 40 },
+    2: { caloriesLeft: 1500, totalCalories: 2400, proteinLeft: 90, carbsLeft: 110, fatLeft: 30 },
+    3: { caloriesLeft: 2000, totalCalories: 2400, proteinLeft: 140, carbsLeft: 180, fatLeft: 50 },
+    4: { caloriesLeft: 1200, totalCalories: 2400, proteinLeft: 80, carbsLeft: 90, fatLeft: 25 },
+    5: { caloriesLeft: 1600, totalCalories: 2400, proteinLeft: 100, carbsLeft: 130, fatLeft: 35 },
+    6: { caloriesLeft: 1000, totalCalories: 2400, proteinLeft: 100, carbsLeft: 99, fatLeft: 25 },
+    7: { caloriesLeft: 2200, totalCalories: 2400, proteinLeft: 150, carbsLeft: 200, fatLeft: 55 },
+  };
+
+  const currentData = dayData[selectedDay];
+  const caloriesLeft = currentData.caloriesLeft;
+  const totalCalories = currentData.totalCalories;
+  const proteinLeft = currentData.proteinLeft;
+  const carbsLeft = currentData.carbsLeft;
+  const fatLeft = currentData.fatLeft;
   
   const weekDays = [
     { day: 'S', date: 1 },
@@ -15,7 +37,7 @@ export default function DashboardPage() {
     { day: 'M', date: 3 },
     { day: 'T', date: 4 },
     { day: 'W', date: 5 },
-    { day: 'T', date: 6, active: true },
+    { day: 'T', date: 6 },
     { day: 'F', date: 7 },
   ];
 
@@ -27,23 +49,24 @@ export default function DashboardPage() {
         {/* Week Calendar */}
         <div className="flex justify-between gap-2 mb-6">
           {weekDays.map((item, index) => (
-            <div
+            <button
               key={index}
-              className={`flex flex-col items-center gap-2 ${
-                item.active ? 'opacity-100' : 'opacity-40'
+              onClick={() => setSelectedDay(item.date)}
+              className={`flex flex-col items-center gap-2 transition-opacity hover:opacity-100 ${
+                selectedDay === item.date ? 'opacity-100' : 'opacity-40'
               }`}
             >
               <div
-                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center text-sm font-medium ${
-                  item.active
-                    ? 'border-foreground'
-                    : 'border-dashed border-muted-foreground'
+                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-all ${
+                  selectedDay === item.date
+                    ? 'border-foreground bg-foreground text-background'
+                    : 'border-dashed border-muted-foreground hover:border-foreground'
                 }`}
               >
                 {item.day}
               </div>
               <span className="text-sm">{item.date}</span>
-            </div>
+            </button>
           ))}
         </div>
 
