@@ -4,11 +4,15 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function PersonalInfoPage() {
   const navigate = useNavigate();
   const [gender, setGender] = useState<string>('');
-  const [birthdate, setBirthdate] = useState<string>('');
+  const [birthdate, setBirthdate] = useState<Date | undefined>(undefined);
   const [country, setCountry] = useState<string>('');
   const [progress] = useState(50); // Progress percentage
 
@@ -108,13 +112,40 @@ export default function PersonalInfoPage() {
           <Label className="text-lg font-semibold text-foreground mb-3 block">
             When were you born?
           </Label>
-          <input
-            type="date"
-            value={birthdate}
-            onChange={(e) => setBirthdate(e.target.value)}
-            max={new Date().toISOString().split('T')[0]}
-            className="w-full text-lg py-6 px-4 rounded-lg border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "w-full text-lg py-6 px-4 rounded-lg border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all flex items-center justify-between",
+                  !birthdate && "text-muted-foreground"
+                )}
+              >
+                <span>
+                  {birthdate ? (
+                    new Intl.DateTimeFormat('ru-RU', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    }).format(birthdate)
+                  ) : (
+                    "ДД.ММ.ГГГГ"
+                  )}
+                </span>
+                <CalendarIcon className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={birthdate}
+                onSelect={setBirthdate}
+                captionLayout="dropdown"
+                fromYear={1900}
+                toYear={new Date().getFullYear()}
+                defaultMonth={birthdate || new Date(2000, 0)}
+              />
+            </PopoverContent>
+          </Popover>
         </motion.div>
 
         {/* Country */}
@@ -128,48 +159,49 @@ export default function PersonalInfoPage() {
             className="w-full text-lg py-6 px-4 rounded-lg border-2 border-border bg-background text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
           >
             <option value="">Select country</option>
-            <option value="us">United States</option>
-            <option value="uk">United Kingdom</option>
-            <option value="ca">Canada</option>
+            <option value="ar">Argentina</option>
             <option value="au">Australia</option>
-            <option value="de">Germany</option>
-            <option value="fr">France</option>
-            <option value="es">Spain</option>
-            <option value="it">Italy</option>
-            <option value="nl">Netherlands</option>
-            <option value="be">Belgium</option>
-            <option value="se">Sweden</option>
-            <option value="no">Norway</option>
-            <option value="dk">Denmark</option>
-            <option value="fi">Finland</option>
-            <option value="pl">Poland</option>
-            <option value="cz">Czech Republic</option>
             <option value="at">Austria</option>
-            <option value="ch">Switzerland</option>
-            <option value="pt">Portugal</option>
+            <option value="az">Azerbaijan</option>
+            <option value="be">Belgium</option>
+            <option value="br">Brazil</option>
+            <option value="ca">Canada</option>
+            <option value="cn">China</option>
+            <option value="cz">Czech Republic</option>
+            <option value="dk">Denmark</option>
+            <option value="eg">Egypt</option>
+            <option value="fi">Finland</option>
+            <option value="fr">France</option>
+            <option value="de">Germany</option>
             <option value="gr">Greece</option>
+            <option value="in">India</option>
+            <option value="id">Indonesia</option>
+            <option value="il">Israel</option>
+            <option value="it">Italy</option>
             <option value="jp">Japan</option>
             <option value="kr">South Korea</option>
-            <option value="cn">China</option>
-            <option value="in">India</option>
-            <option value="br">Brazil</option>
-            <option value="mx">Mexico</option>
-            <option value="ar">Argentina</option>
-            <option value="za">South Africa</option>
-            <option value="nz">New Zealand</option>
-            <option value="sg">Singapore</option>
             <option value="my">Malaysia</option>
-            <option value="th">Thailand</option>
-            <option value="id">Indonesia</option>
+            <option value="mx">Mexico</option>
+            <option value="nl">Netherlands</option>
+            <option value="nz">New Zealand</option>
+            <option value="no">Norway</option>
             <option value="ph">Philippines</option>
-            <option value="vn">Vietnam</option>
-            <option value="tr">Turkey</option>
+            <option value="pl">Poland</option>
+            <option value="pt">Portugal</option>
             <option value="ru">Russia</option>
-            <option value="ua">Ukraine</option>
-            <option value="eg">Egypt</option>
             <option value="sa">Saudi Arabia</option>
+            <option value="sg">Singapore</option>
+            <option value="za">South Africa</option>
+            <option value="es">Spain</option>
+            <option value="se">Sweden</option>
+            <option value="ch">Switzerland</option>
+            <option value="th">Thailand</option>
+            <option value="tr">Turkey</option>
+            <option value="ua">Ukraine</option>
             <option value="ae">United Arab Emirates</option>
-            <option value="il">Israel</option>
+            <option value="uk">United Kingdom</option>
+            <option value="us">United States</option>
+            <option value="vn">Vietnam</option>
             <option value="other">Other</option>
           </select>
         </motion.div>

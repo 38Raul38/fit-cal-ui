@@ -61,7 +61,7 @@ export default function SignupForm() {
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
-      navigate('/dashboard');
+      navigate('/onboarding');
     }, 1500);
   };
 

@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/Button';
 
 export default function GoalsPage() {
   const navigate = useNavigate();
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [selectedWeightGoal, setSelectedWeightGoal] = useState<string>('');
+  const [selectedOtherGoals, setSelectedOtherGoals] = useState<string[]>([]);
   const [progress] = useState(20); // Progress percentage
 
   const containerVariants = {
@@ -42,19 +43,18 @@ export default function GoalsPage() {
   ];
 
   const weightGoals = ['Lose weight', 'Maintain weight', 'Gain weight'];
+  const otherGoals = ['Gain muscle', 'Change my diet', 'Manage stress', 'Increase steps'];
 
-  const handleGoalToggle = (goal: string) => {
-    setSelectedGoals((prev) => {
+  const handleWeightGoalSelect = (goal: string) => {
+    setSelectedWeightGoal(goal);
+  };
+
+  const handleOtherGoalToggle = (goal: string) => {
+    setSelectedOtherGoals((prev) => {
       if (prev.includes(goal)) {
-        // Remove the goal if already selected
         return prev.filter((g) => g !== goal);
-      } else if (prev.length < 3) {
-        // If it's a weight goal, remove other weight goals first
-        if (weightGoals.includes(goal)) {
-          const filteredGoals = prev.filter((g) => !weightGoals.includes(g));
-          return [...filteredGoals, goal];
-        }
-        // For non-weight goals, just add it
+      } else if (prev.length < 2) {
+        // Max 2 other goals (total 3 with weight goal)
         return [...prev, goal];
       }
       return prev;
@@ -66,8 +66,9 @@ export default function GoalsPage() {
   };
 
   const handleNext = () => {
-    console.log('Selected goals:', selectedGoals);
-    localStorage.setItem('selectedGoals', JSON.stringify(selectedGoals));
+    const allSelectedGoals = [selectedWeightGoal, ...selectedOtherGoals];
+    console.log('Selected goals:', allSelectedGoals);
+    localStorage.setItem('selectedGoals', JSON.stringify(allSelectedGoals));
     navigate('/activity-level');
   };
 
@@ -104,7 +105,8 @@ export default function GoalsPage() {
           variants={containerVariants}
           className="grid gap-4 mb-12"
         >
-          {goals.map((goal) => (
+          {/* Weight Goals (Required - Radio Selection) */}
+          {weightGoals.map((goal) => (
             <motion.div
               key={goal}
               variants={itemVariants}
@@ -112,9 +114,30 @@ export default function GoalsPage() {
               whileTap={{ scale: 0.98 }}
             >
               <button
-                onClick={() => handleGoalToggle(goal)}
+                onClick={() => handleWeightGoalSelect(goal)}
                 className={`w-full py-4 px-6 rounded-lg border-2 text-lg font-medium transition-all duration-200 ${
-                  selectedGoals.includes(goal)
+                  selectedWeightGoal === goal
+                    ? 'border-primary bg-primary/10 text-foreground'
+                    : 'border-border bg-background text-foreground hover:border-primary/50'
+                }`}
+              >
+                {goal}
+              </button>
+            </motion.div>
+          ))}
+
+          {/* Other Goals (Optional - Checkbox Selection) */}
+          {otherGoals.map((goal) => (
+            <motion.div
+              key={goal}
+              variants={itemVariants}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <button
+                onClick={() => handleOtherGoalToggle(goal)}
+                className={`w-full py-4 px-6 rounded-lg border-2 text-lg font-medium transition-all duration-200 ${
+                  selectedOtherGoals.includes(goal)
                     ? 'border-primary bg-primary/10 text-foreground'
                     : 'border-border bg-background text-foreground hover:border-primary/50'
                 }`}
@@ -141,7 +164,7 @@ export default function GoalsPage() {
           <Button
             size="lg"
             onClick={handleNext}
-            disabled={selectedGoals.length === 0}
+            disabled={!selectedWeightGoal}
             className="w-full sm:w-auto px-12 py-6 text-lg font-semibold"
           >
             NEXT

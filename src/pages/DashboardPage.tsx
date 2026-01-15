@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Flame, Apple, Wheat, Droplet } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
+import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
+import { Label, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 interface DayData {
   caloriesLeft: number;
@@ -11,6 +14,7 @@ interface DayData {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const [selectedDay, setSelectedDay] = useState(6);
   
   // Mock data for different days
@@ -42,6 +46,29 @@ export default function DashboardPage() {
   ];
 
   const calorieProgress = ((totalCalories - caloriesLeft) / totalCalories) * 100;
+  const proteinProgress = 70; // Mock percentage
+  const carbsProgress = 50; // Mock percentage  
+  const fatProgress = 30; // Mock percentage
+
+  const caloriesChartData = [{ value: calorieProgress, fill: 'hsl(var(--chart-1))' }];
+  const caloriesChartConfig = {
+    value: { label: 'Calories', color: 'hsl(24, 100%, 50%)' }
+  } satisfies ChartConfig;
+
+  const proteinChartData = [{ value: proteinProgress }];
+  const proteinChartConfig = {
+    value: { label: 'Protein', color: 'hsl(0, 72%, 51%)' }
+  } satisfies ChartConfig;
+
+  const carbsChartData = [{ value: carbsProgress }];
+  const carbsChartConfig = {
+    value: { label: 'Carbs', color: 'hsl(33, 100%, 50%)' }
+  } satisfies ChartConfig;
+
+  const fatChartData = [{ value: fatProgress }];
+  const fatChartConfig = {
+    value: { label: 'Fat', color: 'hsl(199, 89%, 48%)' }
+  } satisfies ChartConfig;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24">
@@ -76,35 +103,45 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-2">{caloriesLeft}</h2>
-                <p className="text-base sm:text-lg text-muted-foreground">Calories left</p>
+                <p className="text-base sm:text-lg text-muted-foreground">{t('dashboard.caloriesLeft')}</p>
               </div>
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="10"
-                    fill="none"
-                    className="text-muted/30"
+              <ChartContainer config={caloriesChartConfig} className="w-32 h-32 sm:w-40 sm:h-40">
+                <RadialBarChart
+                  data={caloriesChartData}
+                  startAngle={90}
+                  endAngle={90 - (calorieProgress * 360) / 100}
+                  innerRadius={60}
+                  outerRadius={90}
+                >
+                  <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <g>
+                              <foreignObject
+                                x={(viewBox.cx ?? 0) - 20}
+                                y={(viewBox.cy ?? 0) - 20}
+                                width="40"
+                                height="40"
+                              >
+                                <div className="flex h-full items-center justify-center">
+                                  <Flame className="h-10 w-10 text-orange-500" />
+                                </div>
+                              </foreignObject>
+                            </g>
+                          )
+                        }
+                      }}
+                    />
+                  </PolarRadiusAxis>
+                  <RadialBar
+                    dataKey="value"
+                    background
+                    cornerRadius={10}
                   />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="10"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 56}`}
-                    strokeDashoffset={`${2 * Math.PI * 56 * (1 - calorieProgress / 100)}`}
-                    className="text-orange-500 transition-all duration-500"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Flame className="h-10 w-10 sm:h-12 sm:w-12 text-orange-500" />
-                </div>
-              </div>
+                </RadialBarChart>
+              </ChartContainer>
             </div>
           </CardContent>
         </Card>
@@ -115,34 +152,38 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-2xl sm:text-3xl font-bold mb-1">{proteinLeft}g</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">Protein left</p>
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-muted/30"
-                  />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * 0.3}`}
-                    className="text-red-400 transition-all duration-500"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Apple className="h-5 w-5 sm:h-6 sm:w-6 text-red-400" />
-                </div>
-              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{t('dashboard.proteinLeft')}</p>
+              <ChartContainer config={proteinChartConfig} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto aspect-square">
+                <RadialBarChart
+                  data={proteinChartData}
+                  startAngle={90}
+                  endAngle={90 - (proteinProgress * 360) / 100}
+                  innerRadius={30}
+                  outerRadius={50}
+                >
+                  <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <foreignObject
+                              x={(viewBox.cx ?? 0) - 12}
+                              y={(viewBox.cy ?? 0) - 12}
+                              width="24"
+                              height="24"
+                            >
+                              <div className="flex h-full items-center justify-center">
+                                <Apple className="h-5 w-5 sm:h-6 sm:w-6 text-red-400" />
+                              </div>
+                            </foreignObject>
+                          )
+                        }
+                      }}
+                    />
+                  </PolarRadiusAxis>
+                  <RadialBar dataKey="value" background cornerRadius={5} />
+                </RadialBarChart>
+              </ChartContainer>
             </CardContent>
           </Card>
 
@@ -150,34 +191,38 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-2xl sm:text-3xl font-bold mb-1">{carbsLeft}g</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">Carbs left</p>
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-muted/30"
-                  />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * 0.5}`}
-                    className="text-orange-400 transition-all duration-500"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Wheat className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
-                </div>
-              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{t('dashboard.carbsLeft')}</p>
+              <ChartContainer config={carbsChartConfig} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto aspect-square">
+                <RadialBarChart
+                  data={carbsChartData}
+                  startAngle={90}
+                  endAngle={90 - (carbsProgress * 360) / 100}
+                  innerRadius={30}
+                  outerRadius={50}
+                >
+                  <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <foreignObject
+                              x={(viewBox.cx ?? 0) - 12}
+                              y={(viewBox.cy ?? 0) - 12}
+                              width="24"
+                              height="24"
+                            >
+                              <div className="flex h-full items-center justify-center">
+                                <Wheat className="h-5 w-5 sm:h-6 sm:w-6 text-orange-400" />
+                              </div>
+                            </foreignObject>
+                          )
+                        }
+                      }}
+                    />
+                  </PolarRadiusAxis>
+                  <RadialBar dataKey="value" background cornerRadius={5} />
+                </RadialBarChart>
+              </ChartContainer>
             </CardContent>
           </Card>
 
@@ -185,34 +230,38 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-2xl sm:text-3xl font-bold mb-1">{fatLeft}g</h3>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">Fat left</p>
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto">
-                <svg className="w-full h-full -rotate-90">
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    className="text-muted/30"
-                  />
-                  <circle
-                    cx="50%"
-                    cy="50%"
-                    r="45%"
-                    stroke="currentColor"
-                    strokeWidth="6"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * 0.7}`}
-                    className="text-blue-400 transition-all duration-500"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Droplet className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
-                </div>
-              </div>
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{t('dashboard.fatLeft')}</p>
+              <ChartContainer config={fatChartConfig} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto aspect-square">
+                <RadialBarChart
+                  data={fatChartData}
+                  startAngle={90}
+                  endAngle={90 - (fatProgress * 360) / 100}
+                  innerRadius={30}
+                  outerRadius={50}
+                >
+                  <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+                    <Label
+                      content={({ viewBox }) => {
+                        if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                          return (
+                            <foreignObject
+                              x={(viewBox.cx ?? 0) - 12}
+                              y={(viewBox.cy ?? 0) - 12}
+                              width="24"
+                              height="24"
+                            >
+                              <div className="flex h-full items-center justify-center">
+                                <Droplet className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
+                              </div>
+                            </foreignObject>
+                          )
+                        }
+                      }}
+                    />
+                  </PolarRadiusAxis>
+                  <RadialBar dataKey="value" background cornerRadius={5} />
+                </RadialBarChart>
+              </ChartContainer>
             </CardContent>
           </Card>
         </div>

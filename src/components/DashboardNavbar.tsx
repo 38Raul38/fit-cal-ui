@@ -1,10 +1,12 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, BarChart3, Settings, Activity, Flame, UtensilsCrossed } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 export default function DashboardNavbar() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -39,7 +41,7 @@ export default function DashboardNavbar() {
               }`}
             >
               <Home className="h-5 w-5" />
-              <span className="font-medium">Home</span>
+              <span className="font-medium">{t('nav.home')}</span>
             </button>
             <button
               onClick={() => navigate('/daily-meals')}
@@ -50,7 +52,7 @@ export default function DashboardNavbar() {
               }`}
             >
               <UtensilsCrossed className="h-5 w-5" />
-              <span className="font-medium">Meals</span>
+              <span className="font-medium">{t('nav.meals')}</span>
             </button>
             <button
               onClick={() => navigate('/analytics')}
@@ -61,7 +63,7 @@ export default function DashboardNavbar() {
               }`}
             >
               <BarChart3 className="h-5 w-5" />
-              <span className="font-medium">Analytics</span>
+              <span className="font-medium">{t('nav.analytics')}</span>
             </button>
             <button
               onClick={() => navigate('/settings')}
@@ -72,7 +74,7 @@ export default function DashboardNavbar() {
               }`}
             >
               <Settings className="h-5 w-5" />
-              <span className="font-medium">Settings</span>
+              <span className="font-medium">{t('nav.settings')}</span>
             </button>
           </div>
 
@@ -101,7 +103,7 @@ export default function DashboardNavbar() {
                 isActive('/dashboard') ? 'text-foreground font-medium' : 'text-muted-foreground'
               }`}
             >
-              Home
+              {t('nav.home')}
             </span>
           </button>
           <button
@@ -118,7 +120,7 @@ export default function DashboardNavbar() {
                 isActive('/daily-meals') ? 'text-foreground font-medium' : 'text-muted-foreground'
               }`}
             >
-              Meals
+              {t('nav.meals')}
             </span>
           </button>
           <button
@@ -135,7 +137,7 @@ export default function DashboardNavbar() {
                 isActive('/analytics') ? 'text-foreground font-medium' : 'text-muted-foreground'
               }`}
             >
-              Analytics
+              {t('nav.analytics')}
             </span>
           </button>
           <button
@@ -152,7 +154,7 @@ export default function DashboardNavbar() {
                 isActive('/settings') ? 'text-foreground font-medium' : 'text-muted-foreground'
               }`}
             >
-              Settings
+              {t('nav.settings')}
             </span>
           </button>
         </div>

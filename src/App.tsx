@@ -14,6 +14,8 @@ import PersonalInfoPage from '@/pages/PersonalInfoPage';
 import MeasurementsPage from '@/pages/MeasurementsPage';
 import ResultsPage from '@/pages/ResultsPage';
 import DailyMealsPage from '@/pages/DailyMealsPage';
+import AnalyticsPage from '@/pages/AnalyticsPage';
+import SettingsPage from '@/pages/SettingsPage';
 
 function App() {
   return (
@@ -70,61 +72,37 @@ function App() {
         {/* Onboarding */}
         <Route
           path="/onboarding"
-          element={
-            <DashboardLayout>
-              <OnboardingPage />
-            </DashboardLayout>
-          }
+          element={<OnboardingPage />}
         />
 
         {/* Goals */}
         <Route
           path="/goals"
-          element={
-            <DashboardLayout>
-              <GoalsPage />
-            </DashboardLayout>
-          }
+          element={<GoalsPage />}
         />
 
         {/* Activity Level */}
         <Route
           path="/activity-level"
-          element={
-            <DashboardLayout>
-              <ActivityLevelPage />
-            </DashboardLayout>
-          }
+          element={<ActivityLevelPage />}
         />
 
         {/* Personal Info */}
         <Route
           path="/personal-info"
-          element={
-            <DashboardLayout>
-              <PersonalInfoPage />
-            </DashboardLayout>
-          }
+          element={<PersonalInfoPage />}
         />
 
         {/* Measurements */}
         <Route
           path="/measurements"
-          element={
-            <DashboardLayout>
-              <MeasurementsPage />
-            </DashboardLayout>
-          }
+          element={<MeasurementsPage />}
         />
 
         {/* Results */}
         <Route
           path="/results"
-          element={
-            <DashboardLayout>
-              <ResultsPage />
-            </DashboardLayout>
-          }
+          element={<ResultsPage />}
         />
 
         {/* Daily Meals */}
@@ -133,6 +111,26 @@ function App() {
           element={
             <DashboardLayout>
               <DailyMealsPage />
+            </DashboardLayout>
+          }
+        />
+
+        {/* Analytics */}
+        <Route
+          path="/analytics"
+          element={
+            <DashboardLayout>
+              <AnalyticsPage />
+            </DashboardLayout>
+          }
+        />
+
+        {/* Settings */}
+        <Route
+          path="/settings"
+          element={
+            <DashboardLayout>
+              <SettingsPage />
             </DashboardLayout>
           }
         />
