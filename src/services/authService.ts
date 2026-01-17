@@ -1,5 +1,5 @@
 import { authApi } from '@/lib/api';
-import type { LoginCredentials, RegisterData, User, AuthResponse, ApiErrorResponse } from '@/types';
+import type { LoginCredentials, RegisterData, User, AuthResponse } from '@/types';
 
 class AuthService {
   /**
@@ -44,11 +44,31 @@ class AuthService {
   }
 
   /**
+   * Вход через Google
+   */
+  async loginWithGoogle(credential: string): Promise<AuthResponse> {
+    try {
+      const response = await authApi.post<AuthResponse>('/api/Auth/google-login', {
+        credential
+      });
+      
+      // Сохранение токена и данных пользователя
+      if (response.data.token) {
+        this.saveAuthData(response.data);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      throw this.handleError(error);
+    }
+  }
+
+  /**
    * Выход пользователя
    */
   async logout(): Promise<void> {
     try {
-      await api.post('/Auth/logout');
+      await authApi.post('/api/Auth/logout');
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -61,7 +81,7 @@ class AuthService {
    */
   async getCurrentUser(): Promise<User> {
     try {
-      const response = await api.get<User>('/Auth/me');
+      const response = await authApi.get<User>('/api/Auth/me');
       return response.data;
     } catch (error: any) {
       throw this.handleError(error);
