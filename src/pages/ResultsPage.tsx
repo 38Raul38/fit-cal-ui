@@ -1,15 +1,61 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Target, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Target, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { useOnboarding } from '@/contexts/OnboardingContext';
+import { calorieApi } from '@/lib/api';
+import type { CalorieCalculationResponse } from '@/types';
 
 export default function ResultsPage() {
   const navigate = useNavigate();
-  
-  // In a real app, this would be calculated based on user inputs
-  const dailyCalories = 2400;
-  const goal = 'Maintain your current weight';
+  const { getCompleteData, clearOnboardingData } = useOnboarding();
+  const [calorieData, setCalorieData] = useState<CalorieCalculationResponse | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    const fetchCalorieData = async () => {
+      const completeData = getCompleteData();
+      
+      if (!completeData) {
+        setError('Missing onboarding data. Please complete all steps.');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await calorieApi.calculateDailyCalories(completeData);
+        setCalorieData(response);
+        
+        // Сохраняем данные пользователя в localStorage
+        const userProfile = {
+          weightKg: completeData.weightKg,
+          heightCm: completeData.heightCm,
+          birthDate: completeData.birthDate,
+          gender: completeData.gender === 0 ? 'male' : 'female',
+          activityLevel: completeData.activityLevel,
+          goalWeightKg: completeData.goalWeightKg,
+          dailyCalories: response.dailyCalories,
+        };
+        localStorage.setItem('userProfile', JSON.stringify(userProfile));
+        
+        // TODO: Сохранение профиля, когда endpoint будет готов
+        // await calorieApi.saveUserProfile({
+        //   ...completeData,
+        //   dailyCalories: response.dailyCalories,
+        // });
+      } catch (err: any) {
+        console.error('Error fetching calorie data:', err);
+        setError(err.message || 'Failed to calculate calories. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCalorieData();
+  }, [getCompleteData]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -29,14 +75,60 @@ export default function ResultsPage() {
       y: 0,
       transition: {
         duration: 0.6,
-        ease: 'easeOut',
       },
     },
   };
 
   const handleContinue = () => {
+    clearOnboardingData(); // Очищаем данные онбординга после завершения
     navigate('/dashboard');
   };
+
+  const handleRetry = () => {
+    navigate('/goals');
+  };
+
+  // Показываем загрузку
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background via-background to-muted/30">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <Loader2 className="w-16 h-16 text-primary animate-spin mx-auto mb-4" />
+          <p className="text-xl text-muted-foreground">Calculating your daily calories...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Показываем ошибку
+  if (error || !calorieData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background via-background to-muted/30">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full text-center"
+        >
+          <div className="bg-destructive/10 border-2 border-destructive/50 rounded-lg p-6 mb-6">
+            <p className="text-lg text-destructive font-medium mb-2">Error</p>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+          <div className="flex gap-4 justify-center">
+            <Button variant="outline" onClick={handleRetry}>
+              Start Over
+            </Button>
+            <Button onClick={() => navigate('/dashboard')}>
+              Go to Dashboard
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-background via-background to-muted/30">
@@ -93,35 +185,19 @@ export default function ResultsPage() {
                 <Target className="w-12 h-12 text-primary" strokeWidth={1.5} />
               </div>
               <p className="text-sm sm:text-base text-muted-foreground mb-2">
-                Your daily calorie goal
+                {calorieData.planText}
               </p>
               <div className="flex items-baseline justify-center gap-2 mb-2">
                 <span className="text-6xl sm:text-7xl font-bold text-foreground">
-                  {dailyCalories.toLocaleString()}
+                  {Math.round(calorieData.dailyCalories).toLocaleString()}
                 </span>
                 <span className="text-2xl text-muted-foreground font-medium">
-                  calories
+                  {calorieData.unitLabel}
                 </span>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Goal Info Card */}
-        <motion.div variants={itemVariants} className="mb-12">
-          <Card className="border-2 border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
-                <TrendingUp className="w-8 h-8 text-primary flex-shrink-0 mt-1" strokeWidth={1.5} />
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Based on your goals, you should:
-                  </p>
-                  <p className="text-xl sm:text-2xl font-semibold text-foreground">
-                    {goal}
-                  </p>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Цель: {calorieData.goal}
+              </p>
             </CardContent>
           </Card>
         </motion.div>

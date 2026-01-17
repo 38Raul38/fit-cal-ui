@@ -1,16 +1,20 @@
-import { useState } from 'react';
-import { Search, X, Plus, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, X, Plus, Loader2, Star } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card, CardContent } from './ui/Card';
 import { Input } from './ui/Input';
+import { api } from '@/lib/api';
+import { getFavoriteFoods, addToFavorites, removeFromFavorites, isFavorite, type FavoriteFood } from '@/lib/favoriteFoods';
 
 interface FoodItem {
+  foodId: number;
   name: string;
   calories: number;
-  protein_g: number;
-  carbohydrates_total_g: number;
-  fat_total_g: number;
-  serving_size_g: number;
+  protein: number;
+  carbs: number;
+  fats: number;
+  servingSize: number;
+  servingUnit: string;
 }
 
 interface FoodSearchModalProps {
@@ -20,14 +24,21 @@ interface FoodSearchModalProps {
   mealType: string;
 }
 
-const API_KEY = 'P58KufgJzgbrsJYGAY42Rw==6CbhshupYvgapnUd';
-
 export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }: FoodSearchModalProps) {
+  const [activeTab, setActiveTab] = useState<'search' | 'favorites'>('search');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<FoodItem[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteFood[]>([]);
   const [servingSizes, setServingSizes] = useState<Record<number, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Load favorites when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setFavorites(getFavoriteFoods());
+    }
+  }, [isOpen]);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -36,33 +47,27 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
     setError('');
     
     try {
-      const response = await fetch(
-        `https://api.calorieninjas.com/v1/nutrition?query=${encodeURIComponent(searchQuery)}`,
-        {
-          headers: {
-            'X-Api-Key': API_KEY,
-          },
-        }
-      );
+      const response = await api.post<FoodItem>('/api/Food', {
+        name: searchQuery,
+        servingSize: null,
+        servingUnit: 'g'
+      });
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch nutrition data');
-      }
-
-      const data = await response.json();
-      setSearchResults(data.items || []);
+      // API возвращает один результат, оборачиваем в массив
+      const results = response.data ? [response.data] : [];
+      setSearchResults(results);
       
-      // Initialize serving sizes to default (100g)
+      // Initialize serving sizes to default from API
       const initialSizes: Record<number, number> = {};
-      data.items?.forEach((_: any, index: number) => {
-        initialSizes[index] = 100;
+      results.forEach((item, index) => {
+        initialSizes[index] = item.servingSize || 100;
       });
       setServingSizes(initialSizes);
       
-      if (!data.items || data.items.length === 0) {
+      if (results.length === 0) {
         setError('No results found. Try a different search term.');
       }
-    } catch (err) {
+    } catch (err: any) {
       setError('Failed to search for food. Please try again.');
       console.error('API Error:', err);
     } finally {
@@ -79,21 +84,21 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
   };
 
   const calculateNutrition = (item: FoodItem, grams: number) => {
-    const ratio = grams / item.serving_size_g;
+    const ratio = grams / item.servingSize;
     return {
       calories: Math.round(item.calories * ratio),
-      protein: Math.round(item.protein_g * ratio * 10) / 10,
-      carbs: Math.round(item.carbohydrates_total_g * ratio * 10) / 10,
-      fat: Math.round(item.fat_total_g * ratio * 10) / 10,
+      protein: Math.round(item.protein * ratio * 10) / 10,
+      carbs: Math.round(item.carbs * ratio * 10) / 10,
+      fat: Math.round(item.fats * ratio * 10) / 10,
     };
   };
 
   const handleAddFood = (item: FoodItem, index: number) => {
-    const grams = servingSizes[index] || 100;
+    const grams = servingSizes[index] || item.servingSize;
     const nutrition = calculateNutrition(item, grams);
     
     onAddFood({
-      name: `${item.name} (${grams}g)`,
+      name: `${item.name} (${grams}${item.servingUnit})`,
       calories: nutrition.calories,
       protein: nutrition.protein,
       carbs: nutrition.carbs,
@@ -103,6 +108,52 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
     setSearchQuery('');
     setSearchResults([]);
     setServingSizes({});
+  };
+
+  const handleAddFavoriteFood = (fav: FavoriteFood) => {
+    onAddFood({
+      name: `${fav.name} (${fav.servingSize}${fav.servingUnit})`,
+      calories: fav.calories,
+      protein: fav.protein,
+      carbs: fav.carbs,
+      fat: fav.fat,
+    });
+    onClose();
+  };
+
+  const handleToggleFavorite = (item: FoodItem, index: number) => {
+    const grams = servingSizes[index] || item.servingSize;
+    const nutrition = calculateNutrition(item, grams);
+    
+    const foodData = {
+      name: item.name,
+      servingSize: grams,
+      servingUnit: item.servingUnit,
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fat: nutrition.fat,
+    };
+
+    if (isFavorite(foodData)) {
+      const fav = favorites.find(f => 
+        f.name === foodData.name && 
+        f.servingSize === foodData.servingSize && 
+        f.servingUnit === foodData.servingUnit
+      );
+      if (fav) {
+        removeFromFavorites(fav.id);
+        setFavorites(getFavoriteFoods());
+      }
+    } else {
+      addToFavorites(foodData);
+      setFavorites(getFavoriteFoods());
+    }
+  };
+
+  const handleRemoveFavorite = (id: string) => {
+    removeFromFavorites(id);
+    setFavorites(getFavoriteFoods());
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -128,8 +179,37 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
             </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex gap-2 mb-6">
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6 border-b border-border">
+            <button
+              onClick={() => setActiveTab('search')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'search'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Search className="h-4 w-4 inline mr-2" />
+              Search
+            </button>
+            <button
+              onClick={() => setActiveTab('favorites')}
+              className={`px-4 py-2 font-medium transition-colors ${
+                activeTab === 'favorites'
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Star className="h-4 w-4 inline mr-2" />
+              Favorites ({favorites.length})
+            </button>
+          </div>
+
+          {/* Search Tab */}
+          {activeTab === 'search' && (
+            <>
+              {/* Search Bar */}
+              <div className="flex gap-2 mb-6">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
@@ -154,23 +234,23 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
             </Button>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-sm text-red-500">{error}</p>
-            </div>
-          )}
+              {/* Error Message */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <p className="text-sm text-red-500">{error}</p>
+                </div>
+              )}
 
-          {/* Results */}
-          <div className="overflow-y-auto max-h-[50vh] space-y-2">
+              {/* Results */}
+              <div className="overflow-y-auto max-h-[50vh] space-y-2">
             {searchResults.length > 0 ? (
               searchResults.map((item, index) => {
-                const grams = servingSizes[index] || 100;
-                const nutrition = calculateNutrition(item, grams);
+                const currentSize = servingSizes[index] || item.servingSize;
+                const nutrition = calculateNutrition(item, currentSize);
                 
                 return (
                   <div
-                    key={index}
+                    key={item.foodId}
                     className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-4">
@@ -180,12 +260,12 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
                         {/* Serving Size Input */}
                         <div className="mb-3">
                           <label className="text-sm text-muted-foreground mb-1 block">
-                            Serving size (grams)
+                            Serving size ({item.servingUnit})
                           </label>
                           <Input
                             type="number"
                             min="1"
-                            value={grams}
+                            value={currentSize}
                             onChange={(e) => handleServingSizeChange(index, e.target.value)}
                             className="w-32"
                           />
@@ -210,17 +290,33 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          Original serving: {item.serving_size_g}g
+                          Original serving: {item.servingSize}{item.servingUnit}
                         </p>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleAddFood(item, index)}
-                        className="gap-2 flex-shrink-0"
-                      >
-                        <Plus className="h-4 w-4" />
-                        Add
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleToggleFavorite(item, index)}
+                          className="flex-shrink-0"
+                        >
+                          <Star
+                            className={`h-4 w-4 ${
+                              isFavorite({ name: item.name, servingSize: servingSizes[index] || item.servingSize, servingUnit: item.servingUnit })
+                                ? 'fill-yellow-500 text-yellow-500'
+                                : ''
+                            }`}
+                          />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddFood(item, index)}
+                          className="gap-2 flex-shrink-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -235,7 +331,75 @@ export default function FoodSearchModal({ isOpen, onClose, onAddFood, mealType }
                 </div>
               )
             )}
-          </div>
+              </div>
+            </>
+          )}
+
+          {/* Favorites Tab */}
+          {activeTab === 'favorites' && (
+            <div className="overflow-y-auto max-h-[50vh] space-y-2">
+              {favorites.length > 0 ? (
+                favorites.map((fav) => (
+                  <div
+                    key={fav.id}
+                    className="p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg capitalize mb-2">{fav.name}</h3>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          {fav.servingSize}{fav.servingUnit}
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Calories</p>
+                            <p className="font-semibold">{fav.calories}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Protein</p>
+                            <p className="font-semibold">{fav.protein}g</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Carbs</p>
+                            <p className="font-semibold">{fav.carbs}g</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Fat</p>
+                            <p className="font-semibold">{fav.fat}g</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRemoveFavorite(fav.id)}
+                          className="flex-shrink-0"
+                        >
+                          <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAddFavoriteFood(fav)}
+                          className="gap-2 flex-shrink-0"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <Star className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
+                  <p className="text-muted-foreground">
+                    No favorite foods yet. Add foods from search results!
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

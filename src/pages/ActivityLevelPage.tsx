@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import { useOnboarding } from '@/contexts/OnboardingContext';
+import { mapActivityLevel } from '@/lib/onboardingMappers';
 
 export default function ActivityLevelPage() {
   const navigate = useNavigate();
+  const { updateOnboardingData } = useOnboarding();
   const [selectedLevel, setSelectedLevel] = useState<string>('');
   const [progress] = useState(40); // Progress percentage
 
@@ -59,7 +62,11 @@ export default function ActivityLevelPage() {
   };
 
   const handleNext = () => {
-    console.log('Selected activity level:', selectedLevel);
+    updateOnboardingData({ 
+      activityLevel: mapActivityLevel(selectedLevel),
+      activityLevelText: selectedLevel // Сохраняем текст для отображения
+    });
+    console.log('Selected activity level:', selectedLevel, '-> ', mapActivityLevel(selectedLevel));
     navigate('/personal-info');
   };
 

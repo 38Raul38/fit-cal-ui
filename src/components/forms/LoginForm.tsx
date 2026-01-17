@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { LoginCredentials } from '@/types';
+import { authService } from '@/services/authService';
 
 export default function LoginForm() {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export default function LoginForm() {
   });
   const [errors, setErrors] = useState<Partial<LoginCredentials>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string>('');
 
   const validateForm = (): boolean => {
     const newErrors: Partial<LoginCredentials> = {};
@@ -40,12 +42,18 @@ export default function LoginForm() {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setApiError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authService.login(formData);
+      // Успешный вход - перенаправление на dashboard
       navigate('/dashboard');
-    }, 1500);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      setApiError(error.message || 'Failed to login. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: keyof LoginCredentials, value: string) => {
@@ -151,6 +159,17 @@ export default function LoginForm() {
             </motion.p>
           )}
         </div>
+
+        {/* API Error Message */}
+        {apiError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-lg bg-destructive/10 border border-destructive/20"
+          >
+            <p className="text-sm text-destructive">{apiError}</p>
+          </motion.div>
+        )}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 text-sm">
           <label className="flex items-center space-x-2 cursor-pointer">

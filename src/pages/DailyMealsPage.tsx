@@ -15,12 +15,6 @@ interface Meal {
   fat: number;
 }
 
-interface DayMeals {
-  breakfast: Meal[];
-  lunch: Meal[];
-  dinner: Meal[];
-}
-
 const getDateKey = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -47,9 +41,11 @@ export default function DailyMealsPage() {
     const meals = getMealsHistory();
     const key = getDateKey(selectedDate);
     const dayData = meals[key] || { breakfast: [], lunch: [], dinner: [] };
-    setBreakfast(dayData.breakfast);
-    setLunch(dayData.lunch);
-    setDinner(dayData.dinner);
+    
+    // Ensure arrays exist
+    setBreakfast(Array.isArray(dayData.breakfast) ? dayData.breakfast : []);
+    setLunch(Array.isArray(dayData.lunch) ? dayData.lunch : []);
+    setDinner(Array.isArray(dayData.dinner) ? dayData.dinner : []);
   }, [selectedDate]);
 
   // Get week days for calendar - starting from Monday
@@ -194,7 +190,7 @@ export default function DailyMealsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24 overflow-x-hidden">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6">
@@ -239,10 +235,6 @@ export default function DailyMealsPage() {
               {weekDays.map((date, index) => {
                 const today = isToday(date);
                 const selected = isSameDay(date, selectedDate);
-                
-                // Debug logging
-                if (index === 0) console.log('Week start:', date.toDateString(), 'Day:', date.getDay());
-                if (today) console.log('TODAY:', date.toDateString(), 'Day:', date.getDay(), 'Date:', date.getDate());
                 
                 return (
                   <button
@@ -364,25 +356,25 @@ export default function DailyMealsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
                 <p className="text-2xl font-bold">
-                  {getTotalCalories([...breakfast, ...lunch, ...dinner])}
+                  {Math.round(getTotalCalories([...breakfast, ...lunch, ...dinner]))}
                 </p>
                 <p className="text-sm text-muted-foreground">{t('dailyMeals.totalCalories')}</p>
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {[...breakfast, ...lunch, ...dinner].reduce((sum, m) => sum + m.protein, 0)}g
+                  {Math.round([...breakfast, ...lunch, ...dinner].reduce((sum, m) => sum + m.protein, 0) * 10) / 10}g
                 </p>
                 <p className="text-sm text-muted-foreground">{t('dailyMeals.protein')}</p>
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {[...breakfast, ...lunch, ...dinner].reduce((sum, m) => sum + m.carbs, 0)}g
+                  {Math.round([...breakfast, ...lunch, ...dinner].reduce((sum, m) => sum + m.carbs, 0) * 10) / 10}g
                 </p>
                 <p className="text-sm text-muted-foreground">{t('dailyMeals.carbs')}</p>
               </div>
               <div>
                 <p className="text-2xl font-bold">
-                  {[...breakfast, ...lunch, ...dinner].reduce((sum, m) => sum + m.fat, 0)}g
+                  {Math.round([...breakfast, ...lunch, ...dinner].reduce((sum, m) => sum + m.fat, 0) * 10) / 10}g
                 </p>
                 <p className="text-sm text-muted-foreground">{t('dailyMeals.fat')}</p>
               </div>

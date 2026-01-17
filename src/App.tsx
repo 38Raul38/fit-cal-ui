@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { OnboardingProvider } from '@/contexts/OnboardingContext';
 import MainLayout from '@/layouts/MainLayout';
 import AuthLayout from '@/layouts/AuthLayout';
 import DashboardLayout from '@/layouts/DashboardLayout';
@@ -19,8 +20,9 @@ import SettingsPage from '@/pages/SettingsPage';
 
 function App() {
   return (
-    <Router>
-      <Routes>
+    <OnboardingProvider>
+      <Router>
+        <Routes>
         {/* Main Layout Routes */}
         <Route
           path="/"
@@ -136,6 +138,7 @@ function App() {
         />
       </Routes>
     </Router>
+    </OnboardingProvider>
   );
 }
 

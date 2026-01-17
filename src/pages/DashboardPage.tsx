@@ -1,54 +1,133 @@
-import { useState } from 'react';
-import { Flame, Apple, Wheat, Droplet } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Apple, Wheat, Droplet, Plus, Minus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { Label, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { getTodayMeals } from '@/lib/mealStorage';
+import { getTodayWater, addWaterGlass, removeWaterGlass, getWaterGoal } from '@/lib/waterStorage';
 
 interface DayData {
   caloriesLeft: number;
   totalCalories: number;
   proteinLeft: number;
+  totalProtein: number;
   carbsLeft: number;
+  totalCarbs: number;
   fatLeft: number;
+  totalFat: number;
 }
 
 export default function DashboardPage() {
   const { t } = useTranslation();
-  const [selectedDay, setSelectedDay] = useState(6);
+  const [waterGlasses, setWaterGlasses] = useState(0);
+  const waterGoal = getWaterGoal();
   
-  // Mock data for different days
-  const dayData: { [key: number]: DayData } = {
-    1: { caloriesLeft: 1800, totalCalories: 2400, proteinLeft: 120, carbsLeft: 150, fatLeft: 40 },
-    2: { caloriesLeft: 1500, totalCalories: 2400, proteinLeft: 90, carbsLeft: 110, fatLeft: 30 },
-    3: { caloriesLeft: 2000, totalCalories: 2400, proteinLeft: 140, carbsLeft: 180, fatLeft: 50 },
-    4: { caloriesLeft: 1200, totalCalories: 2400, proteinLeft: 80, carbsLeft: 90, fatLeft: 25 },
-    5: { caloriesLeft: 1600, totalCalories: 2400, proteinLeft: 100, carbsLeft: 130, fatLeft: 35 },
-    6: { caloriesLeft: 1000, totalCalories: 2400, proteinLeft: 100, carbsLeft: 99, fatLeft: 25 },
-    7: { caloriesLeft: 2200, totalCalories: 2400, proteinLeft: 150, carbsLeft: 200, fatLeft: 55 },
+  const [currentData, setCurrentData] = useState<DayData>({
+    caloriesLeft: 2400,
+    totalCalories: 2400,
+    proteinLeft: 150,
+    totalProtein: 150,
+    carbsLeft: 240,
+    totalCarbs: 240,
+    fatLeft: 80,
+    totalFat: 80,
+  });
+
+  useEffect(() => {
+    // Получаем данные профиля пользователя
+    const savedProfile = localStorage.getItem('userProfile');
+    let dailyCalories = 2400;
+    
+    if (savedProfile) {
+      try {
+        const profile = JSON.parse(savedProfile);
+        dailyCalories = profile.dailyCalories || 2400;
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    }
+
+    // Загружаем настройки макронутриентов из localStorage
+    let proteinPercent = 30;
+    let carbsPercent = 40;
+    let fatPercent = 30;
+    
+    const savedMacros = localStorage.getItem('macroSettings');
+    if (savedMacros) {
+      try {
+        const macros = JSON.parse(savedMacros);
+        proteinPercent = macros.protein || 30;
+        carbsPercent = macros.carbs || 40;
+        fatPercent = macros.fat || 30;
+      } catch (error) {
+        console.error('Error loading macros:', error);
+      }
+    }
+
+    // Рассчитываем рекомендуемые макросы на основе сохраненных настроек
+    const totalProtein = Math.round((dailyCalories * (proteinPercent / 100)) / 4); // 1g белка = 4 kcal
+    const totalCarbs = Math.round((dailyCalories * (carbsPercent / 100)) / 4); // 1g углеводов = 4 kcal
+    const totalFat = Math.round((dailyCalories * (fatPercent / 100)) / 9); // 1g жира = 9 kcal
+
+    // Получаем съеденные продукты за сегодня
+    const todayMeals = getTodayMeals();
+    
+    // Суммируем калории и макросы
+    let consumedCalories = 0;
+    let consumedProtein = 0;
+    let consumedCarbs = 0;
+    let consumedFat = 0;
+
+    todayMeals.forEach(meal => {
+      meal.items.forEach(item => {
+        consumedCalories += item.calories;
+        consumedProtein += item.protein;
+        consumedCarbs += item.carbs;
+        consumedFat += item.fat;
+      });
+    });
+
+    // Рассчитываем остаток
+    setCurrentData({
+      caloriesLeft: Math.max(0, dailyCalories - consumedCalories),
+      totalCalories: dailyCalories,
+      proteinLeft: Math.max(0, totalProtein - consumedProtein),
+      totalProtein,
+      carbsLeft: Math.max(0, totalCarbs - consumedCarbs),
+      totalCarbs,
+      fatLeft: Math.max(0, totalFat - consumedFat),
+      totalFat,
+    });
+
+    // Загружаем воду
+    setWaterGlasses(getTodayWater());
+  }, []);
+  
+  const handleAddWater = () => {
+    const newAmount = addWaterGlass();
+    setWaterGlasses(newAmount);
   };
 
-  const currentData = dayData[selectedDay];
+  const handleRemoveWater = () => {
+    const newAmount = removeWaterGlass();
+    setWaterGlasses(newAmount);
+  };
+  
   const caloriesLeft = currentData.caloriesLeft;
   const totalCalories = currentData.totalCalories;
   const proteinLeft = currentData.proteinLeft;
+  const totalProtein = currentData.totalProtein;
   const carbsLeft = currentData.carbsLeft;
+  const totalCarbs = currentData.totalCarbs;
   const fatLeft = currentData.fatLeft;
+  const totalFat = currentData.totalFat;
   
-  const weekDays = [
-    { day: 'S', date: 1 },
-    { day: 'S', date: 2 },
-    { day: 'M', date: 3 },
-    { day: 'T', date: 4 },
-    { day: 'W', date: 5 },
-    { day: 'T', date: 6 },
-    { day: 'F', date: 7 },
-  ];
-
-  const calorieProgress = ((totalCalories - caloriesLeft) / totalCalories) * 100;
-  const proteinProgress = 70; // Mock percentage
-  const carbsProgress = 50; // Mock percentage  
-  const fatProgress = 30; // Mock percentage
+  const calorieProgress = totalCalories > 0 ? ((totalCalories - caloriesLeft) / totalCalories) * 100 : 0;
+  const proteinProgress = totalProtein > 0 ? ((totalProtein - proteinLeft) / totalProtein) * 100 : 0;
+  const carbsProgress = totalCarbs > 0 ? ((totalCarbs - carbsLeft) / totalCarbs) * 100 : 0;
+  const fatProgress = totalFat > 0 ? ((totalFat - fatLeft) / totalFat) * 100 : 0;
 
   const caloriesChartData = [{ value: calorieProgress, fill: 'hsl(var(--chart-1))' }];
   const caloriesChartConfig = {
@@ -73,30 +152,6 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Week Calendar */}
-        <div className="flex justify-between gap-2 mb-6">
-          {weekDays.map((item, index) => (
-            <button
-              key={index}
-              onClick={() => setSelectedDay(item.date)}
-              className={`flex flex-col items-center gap-2 transition-opacity hover:opacity-100 ${
-                selectedDay === item.date ? 'opacity-100' : 'opacity-40'
-              }`}
-            >
-              <div
-                className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 flex items-center justify-center text-sm font-medium transition-all ${
-                  selectedDay === item.date
-                    ? 'border-foreground bg-foreground text-background'
-                    : 'border-dashed border-muted-foreground hover:border-foreground'
-                }`}
-              >
-                {item.day}
-              </div>
-              <span className="text-sm">{item.date}</span>
-            </button>
-          ))}
-        </div>
-
         {/* Calories Card */}
         <Card className="mb-6">
           <CardContent className="p-6 sm:p-8">
@@ -105,13 +160,13 @@ export default function DashboardPage() {
                 <h2 className="text-5xl sm:text-6xl md:text-7xl font-bold mb-2">{caloriesLeft}</h2>
                 <p className="text-base sm:text-lg text-muted-foreground">{t('dashboard.caloriesLeft')}</p>
               </div>
-              <ChartContainer config={caloriesChartConfig} className="w-32 h-32 sm:w-40 sm:h-40">
+              <ChartContainer config={caloriesChartConfig} className="w-28 h-28 sm:w-36 sm:h-36">
                 <RadialBarChart
                   data={caloriesChartData}
                   startAngle={90}
                   endAngle={90 - (calorieProgress * 360) / 100}
-                  innerRadius={60}
-                  outerRadius={90}
+                  innerRadius={45}
+                  outerRadius={65}
                 >
                   <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
                     <Label
@@ -120,13 +175,13 @@ export default function DashboardPage() {
                           return (
                             <g>
                               <foreignObject
-                                x={(viewBox.cx ?? 0) - 20}
+                                x={(viewBox.cx ?? 0) - 35}
                                 y={(viewBox.cy ?? 0) - 20}
-                                width="40"
+                                width="70"
                                 height="40"
                               >
                                 <div className="flex h-full items-center justify-center">
-                                  <Flame className="h-10 w-10 text-orange-500" />
+                                  <span className="text-2xl font-bold text-orange-500">{totalCalories - caloriesLeft}</span>
                                 </div>
                               </foreignObject>
                             </g>
@@ -139,6 +194,7 @@ export default function DashboardPage() {
                     dataKey="value"
                     background
                     cornerRadius={10}
+                    fill="hsl(24, 100%, 50%)"
                   />
                 </RadialBarChart>
               </ChartContainer>
@@ -153,13 +209,13 @@ export default function DashboardPage() {
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-2xl sm:text-3xl font-bold mb-1">{proteinLeft}g</h3>
               <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{t('dashboard.proteinLeft')}</p>
-              <ChartContainer config={proteinChartConfig} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto aspect-square">
+              <ChartContainer config={proteinChartConfig} className="w-20 h-20 sm:w-24 sm:h-24 mx-auto aspect-square">
                 <RadialBarChart
                   data={proteinChartData}
                   startAngle={90}
                   endAngle={90 - (proteinProgress * 360) / 100}
-                  innerRadius={30}
-                  outerRadius={50}
+                  innerRadius={25}
+                  outerRadius={40}
                 >
                   <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
                     <Label
@@ -181,7 +237,7 @@ export default function DashboardPage() {
                       }}
                     />
                   </PolarRadiusAxis>
-                  <RadialBar dataKey="value" background cornerRadius={5} />
+                  <RadialBar dataKey="value" background cornerRadius={5} fill="hsl(0, 72%, 51%)" />
                 </RadialBarChart>
               </ChartContainer>
             </CardContent>
@@ -192,13 +248,13 @@ export default function DashboardPage() {
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-2xl sm:text-3xl font-bold mb-1">{carbsLeft}g</h3>
               <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{t('dashboard.carbsLeft')}</p>
-              <ChartContainer config={carbsChartConfig} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto aspect-square">
+              <ChartContainer config={carbsChartConfig} className="w-20 h-20 sm:w-24 sm:h-24 mx-auto aspect-square">
                 <RadialBarChart
                   data={carbsChartData}
                   startAngle={90}
                   endAngle={90 - (carbsProgress * 360) / 100}
-                  innerRadius={30}
-                  outerRadius={50}
+                  innerRadius={25}
+                  outerRadius={40}
                 >
                   <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
                     <Label
@@ -220,7 +276,7 @@ export default function DashboardPage() {
                       }}
                     />
                   </PolarRadiusAxis>
-                  <RadialBar dataKey="value" background cornerRadius={5} />
+                  <RadialBar dataKey="value" background cornerRadius={5} fill="hsl(33, 100%, 50%)" />
                 </RadialBarChart>
               </ChartContainer>
             </CardContent>
@@ -231,13 +287,13 @@ export default function DashboardPage() {
             <CardContent className="p-4 sm:p-6">
               <h3 className="text-2xl sm:text-3xl font-bold mb-1">{fatLeft}g</h3>
               <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">{t('dashboard.fatLeft')}</p>
-              <ChartContainer config={fatChartConfig} className="w-16 h-16 sm:w-20 sm:h-20 mx-auto aspect-square">
+              <ChartContainer config={fatChartConfig} className="w-20 h-20 sm:w-24 sm:h-24 mx-auto aspect-square">
                 <RadialBarChart
                   data={fatChartData}
                   startAngle={90}
                   endAngle={90 - (fatProgress * 360) / 100}
-                  innerRadius={30}
-                  outerRadius={50}
+                  innerRadius={25}
+                  outerRadius={40}
                 >
                   <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
                     <Label
@@ -259,12 +315,86 @@ export default function DashboardPage() {
                       }}
                     />
                   </PolarRadiusAxis>
-                  <RadialBar dataKey="value" background cornerRadius={5} />
+                  <RadialBar dataKey="value" background cornerRadius={5} fill="hsl(199, 89%, 48%)" />
                 </RadialBarChart>
               </ChartContainer>
             </CardContent>
           </Card>
         </div>
+
+        {/* Water Tracker */}
+        <Card className="mt-6">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Droplet className="h-5 w-5 text-blue-500" />
+                <h3 className="text-lg font-semibold">Water Intake</h3>
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {waterGlasses} / {waterGoal} glasses
+              </span>
+            </div>
+
+            {/* Water Progress Bar */}
+            <div className="mb-4">
+              <div className="w-full h-4 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-400 to-blue-600 transition-all duration-300"
+                  style={{ width: `${Math.min((waterGlasses / waterGoal) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Water Glasses Visual */}
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {Array.from({ length: waterGoal }).map((_, index) => (
+                <div
+                  key={index}
+                  className={`w-10 h-12 rounded-lg border-2 transition-all ${
+                    index < waterGlasses
+                      ? 'bg-blue-500 border-blue-500'
+                      : 'bg-transparent border-muted'
+                  }`}
+                >
+                  {index < waterGlasses && (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Droplet className="h-5 w-5 text-white fill-white" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Control Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={handleRemoveWater}
+                disabled={waterGlasses === 0}
+                variant="outline"
+                className="flex-1"
+              >
+                <Minus className="h-4 w-4 mr-2" />
+                Remove
+              </Button>
+              <Button
+                onClick={handleAddWater}
+                disabled={waterGlasses >= waterGoal * 2}
+                className="flex-1"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Glass
+              </Button>
+            </div>
+
+            {waterGlasses >= waterGoal && (
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <p className="text-sm text-green-600 dark:text-green-400 text-center font-medium">
+                  🎉 Great job! You reached your daily water goal!
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

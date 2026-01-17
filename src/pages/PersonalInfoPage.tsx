@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useOnboarding } from '@/contexts/OnboardingContext';
+import { mapGender, formatBirthDate } from '@/lib/onboardingMappers';
 
 export default function PersonalInfoPage() {
   const navigate = useNavigate();
+  const { updateOnboardingData } = useOnboarding();
   const [gender, setGender] = useState<string>('');
   const [birthdate, setBirthdate] = useState<Date | undefined>(undefined);
   const [country, setCountry] = useState<string>('');
@@ -44,7 +46,15 @@ export default function PersonalInfoPage() {
   };
 
   const handleNext = () => {
-    console.log('Gender:', gender, 'Birthdate:', birthdate, 'Country:', country);
+    if (gender && birthdate) {
+      updateOnboardingData({
+        gender: mapGender(gender),
+        genderText: gender,
+        birthDate: formatBirthDate(birthdate),
+      });
+      console.log('Gender:', gender, '-> ', mapGender(gender));
+      console.log('Birthdate:', formatBirthDate(birthdate));
+    }
     navigate('/measurements');
   };
 

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { RegisterData } from '@/types';
+import { authService } from '@/services/authService';
 
 export default function SignupForm() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function SignupForm() {
   });
   const [errors, setErrors] = useState<Partial<RegisterData>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string>('');
 
   const validateForm = (): boolean => {
     const newErrors: Partial<RegisterData> = {};
@@ -57,12 +59,42 @@ export default function SignupForm() {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setApiError('');
     
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await authService.register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+      });
+      // Успешная регистрация - перенаправление на onboarding
       navigate('/onboarding');
-    }, 1500);
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      console.error('Error details:', JSON.stringify(error.details, null, 2));
+      console.error('Validation errors:', JSON.stringify(error.errors, null, 2));
+      console.error('Full error object:', error);
+      
+      // Формирование сообщения об ошибке
+      let errorMessage = error.message || 'Failed to register. Please try again.';
+      
+      // Если есть детали валидации, добавляем их
+      if (error.errors) {
+        const validationMessages = Object.entries(error.errors)
+          .map(([field, messages]: [string, any]) => {
+            const msgs = Array.isArray(messages) ? messages : [messages];
+            return `${field}: ${msgs.join(', ')}`;
+          })
+          .join('\n');
+        
+        errorMessage = `${errorMessage}\n\n${validationMessages}`;
+      }
+      
+      setApiError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: keyof RegisterData, value: string) => {
@@ -229,6 +261,17 @@ export default function SignupForm() {
             </motion.p>
           )}
         </div>
+
+        {/* API Error Message */}
+        {apiError && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3 rounded-lg bg-destructive/10 border border-destructive/20"
+          >
+            <p className="text-sm text-destructive whitespace-pre-line">{apiError}</p>
+          </motion.div>
+        )}
 
         <label className="flex items-start space-x-2 cursor-pointer pt-1">
           <input

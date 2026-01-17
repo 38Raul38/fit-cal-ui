@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/Button';
 import { Separator } from '@/components/ui/separator';
 import { LogOut, User, Palette, Globe, Activity } from 'lucide-react';
+import { authService } from '@/services/authService';
 
 type Language = 'en' | 'az' | 'ru' | 'de' | 'es';
 type Theme = 'light' | 'dark';
@@ -22,14 +23,58 @@ export default function SettingsPage() {
   const [dateOfBirth, setDateOfBirth] = useState('1990-01-01');
   const [gender, setGender] = useState<Gender>('male');
 
+  // Загрузка данных из localStorage при монтировании
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+      try {
+        const profile = JSON.parse(savedProfile);
+        if (profile.weightKg) setWeight(profile.weightKg.toString());
+        if (profile.heightCm) setHeight(profile.heightCm.toString());
+        if (profile.birthDate) setDateOfBirth(profile.birthDate);
+        if (profile.gender) setGender(profile.gender);
+      } catch (error) {
+        console.error('Error loading user profile:', error);
+      }
+    }
+  }, []);
+
   // Macronutrients State
   const [protein, setProtein] = useState('30');
   const [carbs, setCarbs] = useState('40');
   const [fat, setFat] = useState('30');
 
+  // Загрузка макронутриентов из localStorage
+  useEffect(() => {
+    const savedMacros = localStorage.getItem('macroSettings');
+    if (savedMacros) {
+      try {
+        const macros = JSON.parse(savedMacros);
+        setProtein(macros.protein.toString());
+        setCarbs(macros.carbs.toString());
+        setFat(macros.fat.toString());
+      } catch (error) {
+        console.error('Error loading macros:', error);
+      }
+    }
+  }, []);
+
   // Preferences State
   const [language, setLanguage] = useState<Language>(i18n.language as Language || 'en');
   const [theme, setTheme] = useState<Theme>('light');
+
+  // Загрузка темы из localStorage при монтировании
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as Theme;
+    if (savedTheme) {
+      setTheme(savedTheme);
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }, []);
 
   const languageLabels = {
     en: 'English',
@@ -40,17 +85,39 @@ export default function SettingsPage() {
   };
 
   const handleSavePersonalDetails = () => {
-    // Save to localStorage or API
-    console.log('Saving personal details:', { weight, height, dateOfBirth, gender });
+    // Сохраняем обновленные данные в localStorage
+    const savedProfile = localStorage.getItem('userProfile');
+    const currentProfile = savedProfile ? JSON.parse(savedProfile) : {};
+    
+    const updatedProfile = {
+      ...currentProfile,
+      weightKg: parseFloat(weight),
+      heightCm: parseFloat(height),
+      birthDate: dateOfBirth,
+      gender,
+    };
+    
+    localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
+    console.log('Saving personal details:', updatedProfile);
+    
+    // TODO: Отправить на backend когда API будет готово
   };
 
   const handleSaveMacros = () => {
     const total = parseInt(protein) + parseInt(carbs) + parseInt(fat);
     if (total !== 100) {
-      alert(t('settings.macrosDescription'));
+      alert('Macros must total 100%');
       return;
     }
-    console.log('Saving macros:', { protein, carbs, fat });
+    
+    const macros = {
+      protein: parseInt(protein),
+      carbs: parseInt(carbs),
+      fat: parseInt(fat),
+    };
+    
+    localStorage.setItem('macroSettings', JSON.stringify(macros));
+    console.log('Saving macros:', macros);
   };
 
   const handleLanguageChange = (newLang: Language) => {
@@ -59,13 +126,20 @@ export default function SettingsPage() {
     localStorage.setItem('language', newLang);
   };
 
-  const handleLogout = () => {
-    // Clear user session
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Even if API fails, still redirect to login
+      navigate('/login');
+    }
   };
 
   const handleThemeChange = (newTheme: Theme) => {
     setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
     // Apply theme to document
     if (newTheme === 'dark') {
       document.documentElement.classList.add('dark');
@@ -210,17 +284,6 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground">{t('settings.total')}:</span>
-              <span className={`font-semibold ${
-                parseInt(protein) + parseInt(carbs) + parseInt(fat) === 100
-                  ? 'text-green-500'
-                  : 'text-red-500'
-              }`}>
-                {parseInt(protein) + parseInt(carbs) + parseInt(fat)}%
-              </span>
             </div>
 
             <Button onClick={handleSaveMacros} className="mt-2">

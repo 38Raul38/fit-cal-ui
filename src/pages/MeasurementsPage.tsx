@@ -4,9 +4,12 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
+import { useOnboarding } from '@/contexts/OnboardingContext';
+import { mapGoal } from '@/lib/onboardingMappers';
 
 export default function MeasurementsPage() {
   const navigate = useNavigate();
+  const { updateOnboardingData } = useOnboarding();
   const [heightUnit, setHeightUnit] = useState<'ft' | 'cm'>('ft');
   const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>('lb');
   const [heightFeet, setHeightFeet] = useState<string>('');
@@ -85,7 +88,43 @@ export default function MeasurementsPage() {
   };
 
   const handleNext = () => {
-    console.log('Measurements:', { heightUnit, weightUnit, heightFeet, heightInches, heightCm, currentWeight, goalWeight });
+    // Конвертация в метрическую систему для бэкенда
+    let heightInCm: number;
+    if (heightUnit === 'ft') {
+      const feet = parseFloat(heightFeet) || 0;
+      const inches = parseFloat(heightInches) || 0;
+      const totalInches = feet * 12 + inches;
+      heightInCm = totalInches * 2.54; // конвертация в см
+    } else {
+      heightInCm = parseFloat(heightCm) || 0;
+    }
+
+    let weightInKg: number;
+    let goalWeightInKg: number;
+    if (weightUnit === 'lb') {
+      weightInKg = (parseFloat(currentWeight) || 0) * 0.453592; // конвертация в кг
+      goalWeightInKg = (parseFloat(goalWeight) || 0) * 0.453592;
+    } else {
+      weightInKg = parseFloat(currentWeight) || 0;
+      goalWeightInKg = parseFloat(goalWeight) || 0;
+    }
+
+    // Получаем goal из localStorage
+    const goalsFromStorage = localStorage.getItem('selectedGoals');
+    const selectedGoalsArray = goalsFromStorage ? JSON.parse(goalsFromStorage) : [];
+    const goalValue = mapGoal(selectedGoalsArray);
+
+    // Если цель - maintain weight, goalWeightKg должен быть null
+    const finalGoalWeight = goalValue === 1 ? null : Math.round(goalWeightInKg * 10) / 10;
+
+    updateOnboardingData({
+      goal: goalValue,
+      heightCm: Math.round(heightInCm * 10) / 10, // округление до 1 знака
+      weightKg: Math.round(weightInKg * 10) / 10,
+      goalWeightKg: finalGoalWeight,
+    });
+
+    console.log('Measurements:', { goal: goalValue, heightInCm, weightInKg, goalWeightInKg: finalGoalWeight });
     navigate('/results');
   };
 

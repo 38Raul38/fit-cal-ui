@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { ChartContainer, type ChartConfig } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { getMealsForDate, getTotalNutrition, getDateKey } from '@/lib/mealStorage';
 
 type GoalPeriod = '90days' | '6months' | '1year' | 'alltime';
 type CaloriePeriod = 'thisweek' | 'lastweek' | '2weeks';
@@ -11,6 +11,55 @@ export default function AnalyticsPage() {
   const { t } = useTranslation();
   const [selectedGoalPeriod, setSelectedGoalPeriod] = useState<GoalPeriod>('90days');
   const [selectedCaloriePeriod, setSelectedCaloriePeriod] = useState<CaloriePeriod>('thisweek');
+
+  // Function to get calories data for a date range
+  const getCaloriesDataForPeriod = (daysAgo: number, daysCount: number) => {
+    const data = [];
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    for (let i = daysCount - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - (daysAgo + i));
+      
+      const meals = getMealsForDate(date);
+      const nutrition = getTotalNutrition(meals);
+      
+      const dayName = dayNames[date.getDay()];
+      
+      data.push({
+        day: daysCount > 7 ? `W${Math.floor(i / 7) + 1} ${dayName}` : dayName,
+        calories: Math.round(nutrition.calories),
+        date: getDateKey(date),
+      });
+    }
+    
+    return data;
+  };
+
+  // Calculate calories data based on selected period
+  const caloriesData = useMemo(() => {
+    switch (selectedCaloriePeriod) {
+      case 'thisweek':
+        return getCaloriesDataForPeriod(0, 7);
+      case 'lastweek':
+        return getCaloriesDataForPeriod(7, 7);
+      case '2weeks':
+        return getCaloriesDataForPeriod(7, 14);
+      default:
+        return getCaloriesDataForPeriod(0, 7);
+    }
+  }, [selectedCaloriePeriod]);
+
+  // Calculate statistics
+  const caloriesStats = useMemo(() => {
+    const values = caloriesData.map(d => d.calories);
+    const total = values.reduce((sum, val) => sum + val, 0);
+    const average = values.length > 0 ? Math.round(total / values.length) : 0;
+    const highest = values.length > 0 ? Math.max(...values) : 0;
+    const lowest = values.length > 0 ? Math.min(...values) : 0;
+    
+    return { average, highest, lowest, total };
+  }, [caloriesData]);
 
   // Mock data for Goal Progress
   const goalProgressData = {
@@ -40,50 +89,7 @@ export default function AnalyticsPage() {
     ],
   };
 
-  // Mock data for Total Calories
-  const caloriesData = {
-    thisweek: [
-      { day: 'Mon', calories: 2100 },
-      { day: 'Tue', calories: 2300 },
-      { day: 'Wed', calories: 1900 },
-      { day: 'Thu', calories: 2400 },
-      { day: 'Fri', calories: 2200 },
-      { day: 'Sat', calories: 2500 },
-      { day: 'Sun', calories: 2000 },
-    ],
-    lastweek: [
-      { day: 'Mon', calories: 2200 },
-      { day: 'Tue', calories: 2100 },
-      { day: 'Wed', calories: 2300 },
-      { day: 'Thu', calories: 2000 },
-      { day: 'Fri', calories: 2400 },
-      { day: 'Sat', calories: 2600 },
-      { day: 'Sun', calories: 2100 },
-    ],
-    '2weeks': [
-      { day: 'W1 Mon', calories: 2200 },
-      { day: 'W1 Tue', calories: 2100 },
-      { day: 'W1 Wed', calories: 2300 },
-      { day: 'W1 Thu', calories: 2000 },
-      { day: 'W1 Fri', calories: 2400 },
-      { day: 'W1 Sat', calories: 2600 },
-      { day: 'W1 Sun', calories: 2100 },
-      { day: 'W2 Mon', calories: 2100 },
-      { day: 'W2 Tue', calories: 2300 },
-      { day: 'W2 Wed', calories: 1900 },
-      { day: 'W2 Thu', calories: 2400 },
-      { day: 'W2 Fri', calories: 2200 },
-      { day: 'W2 Sat', calories: 2500 },
-      { day: 'W2 Sun', calories: 2000 },
-    ],
-  };
-
-  const caloriesChartConfig = {
-    calories: {
-      label: 'Calories',
-      color: 'hsl(24, 100%, 50%)',
-    },
-  } satisfies ChartConfig;
+  // Remove old mock caloriesData and unused config
 
   const goalPeriodLabels = {
     '90days': t('analytics.90days'),
@@ -190,7 +196,7 @@ export default function AnalyticsPage() {
                 <h3 className="text-lg font-semibold mb-4">{t('analytics.dailyBreakdown')}</h3>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={caloriesData[selectedCaloriePeriod]} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                    <BarChart data={caloriesData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis
                         dataKey="day"
@@ -220,7 +226,7 @@ export default function AnalyticsPage() {
                 <h3 className="text-lg font-semibold mb-4">{t('analytics.trendAnalysis')}</h3>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={caloriesData[selectedCaloriePeriod]} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                    <LineChart data={caloriesData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis
                         dataKey="day"
@@ -252,30 +258,19 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm text-muted-foreground mb-1">{t('analytics.average')}</p>
-                <p className="text-2xl font-bold">
-                  {Math.round(
-                    caloriesData[selectedCaloriePeriod].reduce((sum, d) => sum + d.calories, 0) /
-                      caloriesData[selectedCaloriePeriod].length
-                  )}
-                </p>
+                <p className="text-2xl font-bold">{caloriesStats.average}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm text-muted-foreground mb-1">{t('analytics.highest')}</p>
-                <p className="text-2xl font-bold">
-                  {Math.max(...caloriesData[selectedCaloriePeriod].map((d) => d.calories))}
-                </p>
+                <p className="text-2xl font-bold">{caloriesStats.highest}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm text-muted-foreground mb-1">{t('analytics.lowest')}</p>
-                <p className="text-2xl font-bold">
-                  {Math.min(...caloriesData[selectedCaloriePeriod].map((d) => d.calories))}
-                </p>
+                <p className="text-2xl font-bold">{caloriesStats.lowest}</p>
               </div>
               <div className="bg-muted/50 rounded-lg p-4">
                 <p className="text-sm text-muted-foreground mb-1">{t('analytics.total')}</p>
-                <p className="text-2xl font-bold">
-                  {caloriesData[selectedCaloriePeriod].reduce((sum, d) => sum + d.calories, 0)}
-                </p>
+                <p className="text-2xl font-bold">{caloriesStats.total}</p>
               </div>
             </div>
           </CardContent>
