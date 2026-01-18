@@ -11,8 +11,8 @@ class AuthService {
         confirmPassword: data.confirmPassword,
       });
       
-      if (response.data.token && response.data.refreshToken) {
-        this.saveAuthData(response.data);
+      if (response.data.data?.accessToken && response.data. data?.refreshToken) {
+        this.saveAuthData(response. data);
       }
       
       return response.data;
@@ -25,7 +25,7 @@ class AuthService {
     try {
       const response = await authApi.post<AuthResponse>('/api/Auth/login', credentials);
       
-      if (response.data.token && response.data.refreshToken) {
+      if (response.data.data?. accessToken && response.data.data?.refreshToken) {
         this.saveAuthData(response.data);
       }
       
@@ -35,13 +35,13 @@ class AuthService {
     }
   }
 
-  async loginWithGoogle(credential: string): Promise<AuthResponse> {
+  async loginWithGoogle(credential:  string): Promise<AuthResponse> {
     try {
       const response = await authApi.post<AuthResponse>('/api/Auth/google-login', {
         credential
       });
       
-      if (response.data.token && response.data.refreshToken) {
+      if (response.data.data?.accessToken && response.data.data?.refreshToken) {
         this.saveAuthData(response.data);
       }
       
@@ -51,26 +51,35 @@ class AuthService {
     }
   }
 
-  async logout(): Promise<void> {
-    const refreshToken = localStorage.getItem('refreshToken') || '';
-    const token = localStorage.getItem('authToken') || '';
-    
-    try {
-      if (token && refreshToken) {
-        await authApi.post('/api/Auth/logout', 
-          { refreshToken },
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+async logout(): Promise<void> {
+  const refreshToken = localStorage.getItem('refreshToken') || '';
+  const token = localStorage.getItem('authToken') || '';
+  
+  try {
+    if (token && refreshToken) {
+      await authApi.post('/api/Auth/logout', 
+        { refreshToken },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        );
-      }
-    } catch (error) {
-    } finally {
-      this.clearAuthData();
+        }
+      );
+      console.log('✅ Logout successful');
     }
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+  } finally {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    sessionStorage. clear();
+    this.clearAuthData();
+    
+    // Очищаем историю и редиректим
+    window.history.pushState(null, '', '/login');
+    window.location.href = '/login';
   }
+}
 
   async getCurrentUser(): Promise<User> {
     try {
@@ -104,15 +113,25 @@ class AuthService {
   }
 
   private saveAuthData(authData: AuthResponse): void {
-    localStorage.setItem('authToken', authData.token);
+    const { accessToken, refreshToken } = authData.data;
     
-    if (authData.refreshToken) {
-      localStorage.setItem('refreshToken', authData.refreshToken);
-    }
+    console.log('💾 Saving tokens:', { 
+      hasAccessToken: !!accessToken, 
+      hasRefreshToken: !!refreshToken 
+    });
+    
+    localStorage.setItem('authToken', accessToken);
+    localStorage.setItem('refreshToken', refreshToken);
     
     if (authData.user) {
       localStorage.setItem('user', JSON.stringify(authData.user));
     }
+    
+    console.log('✅ Tokens saved! ');
+    console.log('📋 Verification:', {
+      authToken: !!localStorage.getItem('authToken'),
+      refreshToken: !!localStorage. getItem('refreshToken')
+    });
   }
 
   private clearAuthData(): void {
@@ -136,13 +155,13 @@ class AuthService {
         throw new Error('No refresh token available');
       }
       
-      const response = await authApi.post<{ token: string }>('/api/Auth/refresh', {
+      const response = await authApi. post<{ data: { accessToken: string } }>('/api/Auth/refresh', {
         refreshToken
       });
       
-      localStorage.setItem('authToken', response.data.token);
+      localStorage.setItem('authToken', response.data.data.accessToken);
       
-      return response.data.token;
+      return response.data.data. accessToken;
     } catch (error: any) {
       this.clearAuthData();
       throw this.handleError(error);
@@ -154,25 +173,25 @@ class AuthService {
       let message = '';
       
       if (typeof error.response.data === 'string') {
-        const match = error.response.data.match(/ValidationException: (.+?)(\r\n|\\r\\n)/);
+        const match = error.response.data.match(/ValidationException:  (.+?)(\r\n|\\r\\n)/);
         if (match) {
           message = match[1];
         } else {
-          message = error.response.data.split('\r\n')[0] || error.response.data;
+          message = error. response.data.split('\r\n')[0] || error.response.data;
         }
       } else {
-        message = error.response.data?.message || 
+        message = error.response.data?. message || 
                  error.response.data?.title ||
                  'An error occurred during authentication';
       }
       
-      const apiError: any = new Error(message);
+      const apiError:  any = new Error(message);
       apiError.status = error.response.status;
       apiError.errors = error.response.data?.errors;
       apiError.details = error.response.data;
       
       return apiError;
-    } else if (error.request) {
+    } else if (error. request) {
       return new Error('Network error. Please check your connection.');
     } else {
       return new Error(error.message || 'An unexpected error occurred');
