@@ -13,10 +13,22 @@ interface DayMeals {
   dinner: Meal[];
 }
 
-const STORAGE_KEY = 'fit-tracker-meals';
+const getStorageKey = (): string => {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      return `fit-tracker-meals-${user.id}`;
+    } catch {
+      console.warn('Failed to parse user data');
+    }
+  }
+  return 'fit-tracker-meals'; // Fallback для неавторизованных
+};
 
 export const getMealsHistory = (): Record<string, DayMeals> => {
   try {
+    const STORAGE_KEY = getStorageKey();
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : {};
   } catch (error) {
@@ -27,6 +39,7 @@ export const getMealsHistory = (): Record<string, DayMeals> => {
 
 export const saveMealsHistory = (history: Record<string, DayMeals>): void => {
   try {
+    const STORAGE_KEY = getStorageKey();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
   } catch (error) {
     console.error('Error saving meals to localStorage:', error);

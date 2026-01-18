@@ -243,7 +243,6 @@ export default function LoginForm() {
               theme="outline"
               size="large"
               text="signin_with"
-              width="100%"
             />
           </motion.div>
         </>

@@ -10,8 +10,8 @@ import { mapGoal } from '@/lib/onboardingMappers';
 export default function MeasurementsPage() {
   const navigate = useNavigate();
   const { updateOnboardingData } = useOnboarding();
-  const [heightUnit, setHeightUnit] = useState<'ft' | 'cm'>('ft');
-  const [weightUnit, setWeightUnit] = useState<'lb' | 'kg'>('lb');
+  const [heightUnit] = useState<'cm'>('cm');
+  const [weightUnit] = useState<'kg'>('kg');
   const [heightFeet, setHeightFeet] = useState<string>('');
   const [heightInches, setHeightInches] = useState<string>('');
   const [heightCm, setHeightCm] = useState<string>('');
@@ -89,25 +89,9 @@ export default function MeasurementsPage() {
 
   const handleNext = () => {
     // Конвертация в метрическую систему для бэкенда
-    let heightInCm: number;
-    if (heightUnit === 'ft') {
-      const feet = parseFloat(heightFeet) || 0;
-      const inches = parseFloat(heightInches) || 0;
-      const totalInches = feet * 12 + inches;
-      heightInCm = totalInches * 2.54; // конвертация в см
-    } else {
-      heightInCm = parseFloat(heightCm) || 0;
-    }
-
-    let weightInKg: number;
-    let goalWeightInKg: number;
-    if (weightUnit === 'lb') {
-      weightInKg = (parseFloat(currentWeight) || 0) * 0.453592; // конвертация в кг
-      goalWeightInKg = (parseFloat(goalWeight) || 0) * 0.453592;
-    } else {
-      weightInKg = parseFloat(currentWeight) || 0;
-      goalWeightInKg = parseFloat(goalWeight) || 0;
-    }
+    const heightInCm = parseFloat(heightCm) || 0;
+    const weightInKg = parseFloat(currentWeight) || 0;
+    const goalWeightInKg = parseFloat(goalWeight) || 0;
 
     // Получаем goal из localStorage
     const goalsFromStorage = localStorage.getItem('selectedGoals');
@@ -129,11 +113,7 @@ export default function MeasurementsPage() {
   };
 
   const isValid = () => {
-    if (heightUnit === 'ft') {
-      return heightFeet && currentWeight && goalWeight;
-    } else {
-      return heightCm && currentWeight && goalWeight;
-    }
+    return heightCm && currentWeight && goalWeight;
   };
 
   return (
@@ -160,77 +140,27 @@ export default function MeasurementsPage() {
             What's your height?
           </Label>
           
-          {heightUnit === 'ft' ? (
-            <div className="flex gap-4 mb-3">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Height (feet)"
-                  value={heightFeet}
-                  onChange={(e) => {
-                    setHeightFeet(e.target.value);
-                    const feet = parseFloat(e.target.value) || 0;
-                    const inches = parseFloat(heightInches) || 0;
-                    const totalInches = feet * 12 + inches;
-                    setHeightError(e.target.value !== '' && totalInches < 26);
-                  }}
-                  className="text-lg py-6 px-4"
-                  min="0"
-                  max="8"
-                />
-                <span className="text-sm text-muted-foreground ml-2">ft.</span>
-              </div>
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Height (inches)"
-                  value={heightInches}
-                  onChange={(e) => {
-                    setHeightInches(e.target.value);
-                    const feet = parseFloat(heightFeet) || 0;
-                    const inches = parseFloat(e.target.value) || 0;
-                    const totalInches = feet * 12 + inches;
-                    setHeightError((heightFeet !== '' || e.target.value !== '') && totalInches < 26);
-                  }}
-                  className="text-lg py-6 px-4"
-                  min="0"
-                  max="11"
-                />
-                <span className="text-sm text-muted-foreground ml-2">in.</span>
-              </div>
-            </div>
-          ) : (
-            <div className="mb-3">
-              <Input
-                type="number"
-                placeholder="Height (cm)"
-                value={heightCm}
-                onChange={(e) => {
-                  setHeightCm(e.target.value);
-                  setHeightError(e.target.value !== '' && parseFloat(e.target.value) < 66);
-                }}
-                className="text-lg py-6 px-4"
-                min="66"
-                max="300"
-              />
-              <span className="text-sm text-muted-foreground ml-2">cm</span>
-            </div>
-          )}
+          <div className="mb-3">
+            <Input
+              type="number"
+              placeholder="Height (cm)"
+              value={heightCm}
+              onChange={(e) => {
+                setHeightCm(e.target.value);
+                setHeightError(e.target.value !== '' && parseFloat(e.target.value) < 66);
+              }}
+              className="text-lg py-6 px-4"
+              min="66"
+              max="300"
+            />
+            <span className="text-sm text-muted-foreground ml-2">cm</span>
+          </div>
           
           {heightError && (
             <p className="text-sm text-destructive mb-2">
-              {heightUnit === 'ft' 
-                ? 'Height must be at least 2 feet 2 inches.'
-                : 'Height must be at least 66 centimeters.'}
+              Height must be at least 66 centimeters.
             </p>
           )}
-          
-          <button
-            onClick={() => setHeightUnit(heightUnit === 'ft' ? 'cm' : 'ft')}
-            className="text-primary hover:underline text-sm"
-          >
-            Switch to {heightUnit === 'ft' ? 'centimeters' : 'feet/inches'}
-          </button>
         </motion.div>
 
         {/* Current Weight Section */}
@@ -244,21 +174,15 @@ export default function MeasurementsPage() {
           <div className="mb-3">
             <Input
               type="number"
-              placeholder={`Current weight (${weightUnit})`}
+              placeholder="Current weight (kg)"
               value={currentWeight}
               onChange={(e) => handleCurrentWeightChange(e.target.value)}
               className="text-lg py-6 px-4"
               min="0"
               step="0.1"
             />
-            <span className="text-sm text-muted-foreground ml-2">{weightUnit}.</span>
+            <span className="text-sm text-muted-foreground ml-2">kg.</span>
           </div>
-          <button
-            onClick={() => setWeightUnit(weightUnit === 'lb' ? 'kg' : 'lb')}
-            className="text-primary hover:underline text-sm"
-          >
-            Switch to {weightUnit === 'lb' ? 'kilograms' : 'pounds'}
-          </button>
         </motion.div>
 
         {/* Goal Weight Section */}
@@ -272,14 +196,14 @@ export default function MeasurementsPage() {
           <div className="mb-3">
             <Input
               type="number"
-              placeholder={`Goal weight (${weightUnit})`}
+              placeholder="Goal weight (kg)"
               value={goalWeight}
               onChange={(e) => handleGoalWeightChange(e.target.value)}
               className="text-lg py-6 px-4"
               min="0"
               step="0.1"
             />
-            <span className="text-sm text-muted-foreground ml-2">{weightUnit}.</span>
+            <span className="text-sm text-muted-foreground ml-2">kg.</span>
           </div>
           {weightError && (
             <p className="text-sm text-destructive">{weightError}</p>

@@ -2,20 +2,16 @@ import { authApi } from '@/lib/api';
 import type { LoginCredentials, RegisterData, User, AuthResponse } from '@/types';
 
 class AuthService {
-  /**
-   * Регистрация нового пользователя
-   */
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
       const response = await authApi.post<AuthResponse>('/api/Auth/register', {
-        fullName: data.name,  // name -> FullName
+        fullName: data.name,
         email: data.email,
         password: data.password,
-        confirmPassword: data.confirmPassword, // Используем confirmPassword из формы
+        confirmPassword: data.confirmPassword,
       });
       
-      // Сохранение токена и данных пользователя
-      if (response.data.token) {
+      if (response.data.token && response.data.refreshToken) {
         this.saveAuthData(response.data);
       }
       
@@ -25,15 +21,11 @@ class AuthService {
     }
   }
 
-  /**
-   * Вход пользователя
-   */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       const response = await authApi.post<AuthResponse>('/api/Auth/login', credentials);
       
-      // Сохранение токена и данных пользователя
-      if (response.data.token) {
+      if (response.data.token && response.data.refreshToken) {
         this.saveAuthData(response.data);
       }
       
@@ -43,17 +35,13 @@ class AuthService {
     }
   }
 
-  /**
-   * Вход через Google
-   */
   async loginWithGoogle(credential: string): Promise<AuthResponse> {
     try {
       const response = await authApi.post<AuthResponse>('/api/Auth/google-login', {
         credential
       });
       
-      // Сохранение токена и данных пользователя
-      if (response.data.token) {
+      if (response.data.token && response.data.refreshToken) {
         this.saveAuthData(response.data);
       }
       
@@ -63,22 +51,27 @@ class AuthService {
     }
   }
 
-  /**
-   * Выход пользователя
-   */
   async logout(): Promise<void> {
+    const refreshToken = localStorage.getItem('refreshToken') || '';
+    const token = localStorage.getItem('authToken') || '';
+    
     try {
-      await authApi.post('/api/Auth/logout');
+      if (token && refreshToken) {
+        await authApi.post('/api/Auth/logout', 
+          { refreshToken },
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+      }
     } catch (error) {
-      console.error('Logout error:', error);
     } finally {
       this.clearAuthData();
     }
   }
 
-  /**
-   * Получение текущего пользователя
-   */
   async getCurrentUser(): Promise<User> {
     try {
       const response = await authApi.get<User>('/api/Auth/me');
@@ -88,23 +81,18 @@ class AuthService {
     }
   }
 
-  /**
-   * Проверка аутентификации
-   */
   isAuthenticated(): boolean {
     return !!localStorage.getItem('authToken');
   }
 
-  /**
-   * Получение сохраненного токена
-   */
   getToken(): string | null {
     return localStorage.getItem('authToken');
   }
 
-  /**
-   * Получение сохраненных данных пользователя
-   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem('refreshToken');
+  }
+
   getUser(): User | null {
     const userStr = localStorage.getItem('user');
     if (!userStr) return null;
@@ -115,34 +103,56 @@ class AuthService {
     }
   }
 
-  /**
-   * Сохранение данных аутентификации
-   */
   private saveAuthData(authData: AuthResponse): void {
     localStorage.setItem('authToken', authData.token);
-    localStorage.setItem('user', JSON.stringify(authData.user));
+    
+    if (authData.refreshToken) {
+      localStorage.setItem('refreshToken', authData.refreshToken);
+    }
+    
+    if (authData.user) {
+      localStorage.setItem('user', JSON.stringify(authData.user));
+    }
   }
 
-  /**
-   * Очистка данных аутентификации
-   */
   private clearAuthData(): void {
+    const user = this.getUser();
+    const userId = user?.id;
+    
     localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    
+    if (userId) {
+      localStorage.removeItem(`fit-tracker-meals-${userId}`);
+    }
   }
 
-  /**
-   * Обработка ошибок API
-   */
+  async refreshAccessToken(): Promise<string> {
+    try {
+      const refreshToken = this.getRefreshToken();
+      
+      if (!refreshToken) {
+        throw new Error('No refresh token available');
+      }
+      
+      const response = await authApi.post<{ token: string }>('/api/Auth/refresh', {
+        refreshToken
+      });
+      
+      localStorage.setItem('authToken', response.data.token);
+      
+      return response.data.token;
+    } catch (error: any) {
+      this.clearAuthData();
+      throw this.handleError(error);
+    }
+  }
+
   private handleError(error: any): Error {
     if (error.response) {
-      // Сервер вернул ошибку
-      console.log('API Error Response:', error.response.data);
-      
-      // Извлекаем сообщение из разных возможных форматов
       let message = '';
       
-      // Попытка извлечь из ValidationException
       if (typeof error.response.data === 'string') {
         const match = error.response.data.match(/ValidationException: (.+?)(\r\n|\\r\\n)/);
         if (match) {
@@ -163,10 +173,8 @@ class AuthService {
       
       return apiError;
     } else if (error.request) {
-      // Запрос был отправлен, но ответа не получено
       return new Error('Network error. Please check your connection.');
     } else {
-      // Ошибка при настройке запроса
       return new Error(error.message || 'An unexpected error occurred');
     }
   }

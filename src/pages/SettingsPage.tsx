@@ -129,11 +129,13 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     try {
       await authService.logout();
-      navigate('/login');
+      // Очищаем историю и делаем редирект
+      window.history.pushState(null, '', '/login');
+      window.location.replace('/login');
     } catch (error) {
       console.error('Logout failed:', error);
-      // Even if API fails, still redirect to login
-      navigate('/login');
+      window.history.pushState(null, '', '/login');
+      window.location.replace('/login');
     }
   };
 

@@ -115,14 +115,14 @@ export default function DashboardPage() {
     setWaterGlasses(newAmount);
   };
   
-  const caloriesLeft = currentData.caloriesLeft;
-  const totalCalories = currentData.totalCalories;
-  const proteinLeft = currentData.proteinLeft;
-  const totalProtein = currentData.totalProtein;
-  const carbsLeft = currentData.carbsLeft;
-  const totalCarbs = currentData.totalCarbs;
-  const fatLeft = currentData.fatLeft;
-  const totalFat = currentData.totalFat;
+  const caloriesLeft = Math.round(currentData.caloriesLeft);
+  const totalCalories = Math.round(currentData.totalCalories);
+  const proteinLeft = Number(currentData.proteinLeft.toFixed(1));
+  const totalProtein = Number(currentData.totalProtein.toFixed(1));
+  const carbsLeft = Number(currentData.carbsLeft.toFixed(1));
+  const totalCarbs = Number(currentData.totalCarbs.toFixed(1));
+  const fatLeft = Number(currentData.fatLeft.toFixed(1));
+  const totalFat = Number(currentData.totalFat.toFixed(1));
   
   const calorieProgress = totalCalories > 0 ? ((totalCalories - caloriesLeft) / totalCalories) * 100 : 0;
   const proteinProgress = totalProtein > 0 ? ((totalProtein - proteinLeft) / totalProtein) * 100 : 0;

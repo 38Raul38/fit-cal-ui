@@ -347,7 +347,6 @@ export default function SignupForm() {
               theme="outline"
               size="large"
               text="signup_with"
-              width="100%"
             />
           </motion.div>
         </>

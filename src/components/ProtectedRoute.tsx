@@ -1,18 +1,42 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
+import { authService } from '@/services/authService';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
-/**
- * Компонент для защиты маршрутов, требующих аутентификации
- * Перенаправляет неаутентифицированных пользователей на страницу входа
- */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading } = useAuth();
 
-  // Показываем загрузку пока проверяем аутентификацию
+  useEffect(() => {
+    if (!authService.isAuthenticated()) {
+      window.location.replace('/login');
+      return;
+    }
+
+    const handlePopState = () => {
+      if (!authService.isAuthenticated()) {
+        window.location.replace('/login');
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !authService.isAuthenticated()) {
+        window.location.replace('/login');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -24,11 +48,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Редирект на login если не аутентифицирован
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Отображаем защищенный контент
   return <>{children}</>;
 }

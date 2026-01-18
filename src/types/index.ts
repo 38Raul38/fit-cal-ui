@@ -58,6 +58,7 @@ export interface AuthResponse {
   token: string;
   user: User;
   expiresIn?: number;
+  refreshToken?: string;
 }
 
 export interface ApiErrorResponse {
