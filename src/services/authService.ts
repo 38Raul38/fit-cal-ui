@@ -1,93 +1,109 @@
 import { authApi } from '@/lib/api';
+import { getUserId, getMealsKey, getFavoritesKey } from '@/lib/utils';
 import type { LoginCredentials, RegisterData, User, AuthResponse } from '@/types';
+
+type Tokens = { accessToken: string; refreshToken: string };
+
+// Функция для декодирования JWT и извлечения userId
+const decodeJWT = (token: string): any => {
+  try {
+    const payload = token.split('.')[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+};
 
 class AuthService {
   async register(data: RegisterData): Promise<AuthResponse> {
-    try {
-      const response = await authApi.post<AuthResponse>('/api/Auth/register', {
-        fullName: data.name,
-        email: data.email,
-        password: data.password,
-        confirmPassword: data.confirmPassword,
+    const response = await authApi.post<AuthResponse>('/api/Auth/register', {
+      fullName: data.name,
+      email: data.email,
+      password: data.password,
+      confirmPassword: data.confirmPassword,
+    });
+    console.log('REGISTER RESPONSE', response.data);
+    console.log('TOKENS', response.data.data);
+
+    const tokens = response.data.data;
+    if (tokens?.accessToken && tokens?.refreshToken) {
+      this.saveAuthData(tokens, response.data.user);
+      console.log('AFTER SAVE', {
+        authToken: localStorage.getItem('authToken'),
+        refreshToken: localStorage.getItem('refreshToken'),
+        user: localStorage.getItem('user')
       });
-      
-      if (response.data.data?.accessToken && response.data. data?.refreshToken) {
-        this.saveAuthData(response. data);
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      throw this.handleError(error);
     }
+
+    return response.data;
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    try {
-      const response = await authApi.post<AuthResponse>('/api/Auth/login', credentials);
-      
-      if (response.data.data?. accessToken && response.data.data?.refreshToken) {
-        this.saveAuthData(response.data);
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      throw this.handleError(error);
-    }
-  }
+    const response = await authApi.post<AuthResponse>('/api/Auth/login', credentials);
+    console.log('LOGIN RESPONSE', response.data);
+    console.log('TOKENS', response.data.data);
 
-  async loginWithGoogle(credential:  string): Promise<AuthResponse> {
-    try {
-      const response = await authApi.post<AuthResponse>('/api/Auth/google-login', {
-        credential
+    const tokens = response.data.data;
+    if (tokens?.accessToken && tokens?.refreshToken) {
+      this.saveAuthData(tokens, response.data.user);
+      console.log('AFTER SAVE', {
+        authToken: localStorage.getItem('authToken'),
+        refreshToken: localStorage.getItem('refreshToken'),
+        user: localStorage.getItem('user')
       });
-      
-      if (response.data.data?.accessToken && response.data.data?.refreshToken) {
-        this.saveAuthData(response.data);
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      throw this.handleError(error);
     }
+
+    return response.data;
   }
 
-async logout(): Promise<void> {
-  const refreshToken = localStorage.getItem('refreshToken') || '';
-  const token = localStorage.getItem('authToken') || '';
-  
-  try {
-    if (token && refreshToken) {
-      await authApi.post('/api/Auth/logout', 
-        { refreshToken },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-      console.log('✅ Logout successful');
+  async loginWithGoogle(credential: string): Promise<AuthResponse> {
+    const response = await authApi.post<AuthResponse>('/api/Auth/google-login', { credential });
+    console.log('GOOGLE LOGIN RESPONSE', response.data);
+    console.log('TOKENS', response.data.data);
+
+    const tokens = response.data.data;
+    if (tokens?.accessToken && tokens?.refreshToken) {
+      this.saveAuthData(tokens, response.data.user);
+      console.log('AFTER SAVE', {
+        authToken: localStorage.getItem('authToken'),
+        refreshToken: localStorage.getItem('refreshToken'),
+        user: localStorage.getItem('user')
+      });
     }
-  } catch (error) {
-    console.error('❌ Logout error:', error);
-  } finally {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('refreshToken');
-    sessionStorage. clear();
-    this.clearAuthData();
-    
-    // Очищаем историю и редиректим
-    window.history.pushState(null, '', '/login');
-    window.location.href = '/login';
+
+    return response.data;
   }
-}
+
+  async logout(): Promise<void> {
+    const refreshToken = localStorage.getItem('refreshToken') || '';
+    const token = localStorage.getItem('authToken') || '';
+
+    try {
+      if (token && refreshToken) {
+        await authApi.post(
+          '/api/Auth/logout',
+          { refreshToken },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+    } finally {
+      this.clearAuthData();
+      sessionStorage.clear();
+      window.history.pushState(null, '', '/login');
+      window.location.href = '/login';
+    }
+  }
 
   async getCurrentUser(): Promise<User> {
-    try {
-      const response = await authApi.get<User>('/api/Auth/me');
-      return response.data;
-    } catch (error: any) {
-      throw this.handleError(error);
-    }
+    const response = await authApi.get<User>('/api/Auth/me');
+    return response.data;
   }
 
   isAuthenticated(): boolean {
@@ -112,90 +128,95 @@ async logout(): Promise<void> {
     }
   }
 
-  private saveAuthData(authData: AuthResponse): void {
-    const { accessToken, refreshToken } = authData.data;
+  private saveAuthData(tokens: Tokens, user?: User): void {
+    console.log('🔐 saveAuthData called with:', { hasUser: !!user, userId: (user as any)?.id });
     
-    console.log('💾 Saving tokens:', { 
-      hasAccessToken: !!accessToken, 
-      hasRefreshToken: !!refreshToken 
-    });
+    // Получаем старый userId перед перезаписью
+    const oldUserId = getUserId();
+    console.log('👤 Old userId:', oldUserId);
     
-    localStorage.setItem('authToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem('authToken', tokens.accessToken);
+    localStorage.setItem('refreshToken', tokens.refreshToken);
     
-    if (authData.user) {
-      localStorage.setItem('user', JSON.stringify(authData.user));
+    let newUserId: string | null = null;
+    
+    // Сначала проверяем, есть ли user от бэкенда
+    if (user && (user as any).id) {
+      newUserId = String((user as any).id);
+      localStorage.setItem('user', JSON.stringify({ id: newUserId }));
+      console.log('💾 Saved user from backend:', newUserId);
+    } else {
+      // Если нет - декодируем JWT и извлекаем userId
+      const decoded = decodeJWT(tokens.accessToken);
+      console.log('🔍 Decoded JWT:', decoded);
+      
+      if (decoded) {
+        newUserId =
+          decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] ||
+          decoded.nameid ||
+          decoded.sub ||
+          decoded.userId ||
+          decoded.id;
+        
+        if (newUserId) {
+          localStorage.setItem('user', JSON.stringify({ id: String(newUserId) }));
+          console.log('💾 Saved userId from JWT:', newUserId);
+        } else {
+          console.warn('⚠️ Failed to extract userId from JWT');
+        }
+      }
     }
     
-    console.log('✅ Tokens saved! ');
-    console.log('📋 Verification:', {
-      authToken: !!localStorage.getItem('authToken'),
-      refreshToken: !!localStorage. getItem('refreshToken')
-    });
+    // Если userId изменился - удаляем данные старого пользователя
+    if (oldUserId && newUserId && oldUserId !== newUserId) {
+      console.log('🔄 User changed! Cleaning old user data:', oldUserId);
+      localStorage.removeItem(`fit-tracker-meals-${oldUserId}`);
+      localStorage.removeItem(`fit-tracker-favorites-${oldUserId}`);
+    }
   }
 
   private clearAuthData(): void {
-    const user = this.getUser();
-    const userId = user?.id;
-    
+    // ВАЖНО: получаем userId ДО удаления user из localStorage
+    const userId = getUserId();
+    console.log('🗑️ clearAuthData: userId=', userId);
+
+    // Удаляем персональные ключи ПЕРЕД удалением user
+    if (userId) {
+      const mealsKey = `fit-tracker-meals-${userId}`;
+      const favoritesKey = `fit-tracker-favorites-${userId}`;
+      console.log('🗑️ Removing personal keys:', mealsKey, favoritesKey);
+      localStorage.removeItem(mealsKey);
+      localStorage.removeItem(favoritesKey);
+    }
+
+    // Удаляем старые общие fallback ключи
+    localStorage.removeItem('fit-tracker-meals');
+    localStorage.removeItem('fit-tracker-favorites');
+
+    // Теперь удаляем auth данные
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     
-    if (userId) {
-      localStorage.removeItem(`fit-tracker-meals-${userId}`);
-    }
+    console.log('🗑️ Cleared all user data (meals, favorites)');
   }
 
   async refreshAccessToken(): Promise<string> {
-    try {
-      const refreshToken = this.getRefreshToken();
-      
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-      
-      const response = await authApi. post<{ data: { accessToken: string } }>('/api/Auth/refresh', {
-        refreshToken
-      });
-      
-      localStorage.setItem('authToken', response.data.data.accessToken);
-      
-      return response.data.data. accessToken;
-    } catch (error: any) {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
       this.clearAuthData();
-      throw this.handleError(error);
+      throw new Error('No refresh token available');
     }
-  }
 
-  private handleError(error: any): Error {
-    if (error.response) {
-      let message = '';
-      
-      if (typeof error.response.data === 'string') {
-        const match = error.response.data.match(/ValidationException:  (.+?)(\r\n|\\r\\n)/);
-        if (match) {
-          message = match[1];
-        } else {
-          message = error. response.data.split('\r\n')[0] || error.response.data;
-        }
-      } else {
-        message = error.response.data?. message || 
-                 error.response.data?.title ||
-                 'An error occurred during authentication';
-      }
-      
-      const apiError:  any = new Error(message);
-      apiError.status = error.response.status;
-      apiError.errors = error.response.data?.errors;
-      apiError.details = error.response.data;
-      
-      return apiError;
-    } else if (error. request) {
-      return new Error('Network error. Please check your connection.');
-    } else {
-      return new Error(error.message || 'An unexpected error occurred');
-    }
+    const response = await authApi.post<{ data: Tokens; user?: User }>(
+      '/api/Auth/refresh',
+      { refreshToken }
+    );
+
+    const tokens = response.data.data;
+    this.saveAuthData(tokens, response.data.user);
+
+    return tokens.accessToken;
   }
 }
 

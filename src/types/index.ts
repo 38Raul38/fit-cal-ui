@@ -55,10 +55,13 @@ export interface CalorieCalculationResponse {
 
 // API Response Types
 export interface AuthResponse {
-  token: string;
-  user: User;
-  expiresIn?: number;
-  refreshToken?: string;
+  succeeded: boolean;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+  };
+  user?: User;
+  message?: string;
 }
 
 export interface ApiErrorResponse {

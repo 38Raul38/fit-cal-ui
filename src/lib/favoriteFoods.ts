@@ -1,3 +1,5 @@
+import { getFavoritesKey } from './utils';
+
 interface FavoriteFood {
   id: string;
   name: string;
@@ -10,10 +12,9 @@ interface FavoriteFood {
   addedAt: string;
 }
 
-const STORAGE_KEY = 'fit-tracker-favorites';
-
 export const getFavoriteFoods = (): FavoriteFood[] => {
   try {
+    const STORAGE_KEY = getFavoritesKey();
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : [];
   } catch (error) {
@@ -24,6 +25,7 @@ export const getFavoriteFoods = (): FavoriteFood[] => {
 
 export const saveFavoriteFoods = (favorites: FavoriteFood[]): void => {
   try {
+    const STORAGE_KEY = getFavoritesKey();
     localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
   } catch (error) {
     console.error('Error saving favorites to localStorage:', error);

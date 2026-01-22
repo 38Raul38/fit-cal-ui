@@ -23,6 +23,17 @@ export const api = axios.create({
   timeout: 10000,
 });
 
+// Общая функция очистки auth данных
+const clearAuth = () => {
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+};
+
+// Проверка, является ли endpoint аутентификационным
+const isAuthEndpoint = (url?: string) =>
+  !!url && (url.includes('/api/Auth/login') || url.includes('/api/Auth/register') || url.includes('/api/Auth/refresh'));
+
 // Interceptor для добавления токена к Auth запросам
 authApi.interceptors.request.use(
   (config) => {
@@ -41,11 +52,15 @@ authApi.interceptors.request.use(
 authApi.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+    const status = error.response?.status;
+    const url = error.config?.url;
+
+    if (status === 401 && !isAuthEndpoint(url)) {
+      console.log('Auth API: 401 detected, clearing auth data');
+      clearAuth();
       window.location.href = '/login';
     }
+
     return Promise.reject(error);
   }
 );
@@ -68,9 +83,10 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
+    const status = error.response?.status;
+    if (status === 401) {
+      console.log('FitCal API: 401 detected, clearing auth data');
+      clearAuth();
       window.location.href = '/login';
     }
     return Promise.reject(error);
