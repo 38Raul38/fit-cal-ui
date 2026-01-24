@@ -79,49 +79,48 @@ export default function SignupForm() {
     setApiError('Google sign up failed. Please try again.');
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+const handleSubmit = async (e: FormEvent) => {
+  e.preventDefault();
 
-    setIsLoading(true);
-    setApiError('');
-    
-    try {
-      await authService.register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-      });
-      // Успешная регистрация - перенаправление на onboarding
-      navigate('/onboarding');
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      console.error('Error details:', JSON.stringify(error.details, null, 2));
-      console.error('Validation errors:', JSON.stringify(error.errors, null, 2));
-      console.error('Full error object:', error);
-      
-      // Формирование сообщения об ошибке
-      let errorMessage = error.message || 'Failed to register. Please try again.';
-      
-      // Если есть детали валидации, добавляем их
-      if (error.errors) {
-        const validationMessages = Object.entries(error.errors)
-          .map(([field, messages]: [string, any]) => {
-            const msgs = Array.isArray(messages) ? messages : [messages];
-            return `${field}: ${msgs.join(', ')}`;
-          })
-          .join('\n');
-        
-        errorMessage = `${errorMessage}\n\n${validationMessages}`;
-      }
-      
-      setApiError(errorMessage);
-    } finally {
-      setIsLoading(false);
+  if (!validateForm()) return;
+
+  setIsLoading(true);
+  setApiError('');
+
+  try {
+    await authService.register({
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      confirmPassword: formData.confirmPassword,
+    });
+
+    await authService.login({
+      email: formData.email,
+      password: formData.password,
+    });
+
+    navigate('/onboarding');
+  } catch (error: any) {
+    let errorMessage = error.message || 'Failed to register. Please try again.';
+
+    if (error.errors) {
+      const validationMessages = Object.entries(error.errors)
+        .map(([field, messages]: [string, any]) => {
+          const msgs = Array.isArray(messages) ? messages : [messages];
+          return `${field}: ${msgs.join(', ')}`;
+        })
+        .join('\n');
+
+      errorMessage = `${errorMessage}\n\n${validationMessages}`;
     }
-  };
+
+    setApiError(errorMessage);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleInputChange = (field: keyof RegisterData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

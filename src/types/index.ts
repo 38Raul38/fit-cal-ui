@@ -46,6 +46,20 @@ export interface OnboardingData {
   goalWeightKg: number | null;
 }
 
+export interface UserProfile {
+  userInformationId?: number;
+  birthDate: string;
+  gender: string;
+  height: number;
+  weight: number;
+  weightGoal: number;
+  activityLevel: string;
+  dailyCalories: number;
+  protein: number;
+  fats: number;
+  carbs: number;
+}
+
 export interface CalorieCalculationResponse {
   dailyCalories: number;
   unitLabel: string;

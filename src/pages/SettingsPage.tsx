@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { Separator } from '@/components/ui/separator';
 import { LogOut, User, Palette, Globe, Activity } from 'lucide-react';
 import { authService } from '@/services/authService';
+import { profileApi } from '@/lib/api';
+import type { UserProfile } from '@/types';
 
 type Language = 'en' | 'az' | 'ru' | 'de' | 'es';
 type Theme = 'light' | 'dark';
@@ -22,21 +24,46 @@ export default function SettingsPage() {
   const [height, setHeight] = useState('175');
   const [dateOfBirth, setDateOfBirth] = useState('1990-01-01');
   const [gender, setGender] = useState<Gender>('male');
+  const [weightGoal, setWeightGoal] = useState('75');
+  const [activityLevel, setActivityLevel] = useState('Moderate');
+  const [dailyCalories, setDailyCalories] = useState(2000);
 
-  // Загрузка данных из localStorage при монтировании
+  // Загрузка данных из API при монтировании
   useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
+    const loadProfile = async () => {
       try {
-        const profile = JSON.parse(savedProfile);
-        if (profile.weightKg) setWeight(profile.weightKg.toString());
-        if (profile.heightCm) setHeight(profile.heightCm.toString());
-        if (profile.birthDate) setDateOfBirth(profile.birthDate);
-        if (profile.gender) setGender(profile.gender);
+        const profile = await profileApi.getProfile();
+        if (profile) {
+          setWeight(profile.weight.toString());
+          setHeight(profile.height.toString());
+          setDateOfBirth(profile.birthDate);
+          setGender(profile.gender.toLowerCase() as Gender);
+          setWeightGoal(profile.weightGoal.toString());
+          setActivityLevel(profile.activityLevel);
+          setDailyCalories(profile.dailyCalories);
+          setProtein(profile.protein.toString());
+          setCarbs(profile.carbs.toString());
+          setFat(profile.fats.toString());
+        }
       } catch (error) {
-        console.error('Error loading user profile:', error);
+        console.error('Error loading profile from API:', error);
+        // Если не удалось загрузить из API, пробуем localStorage
+        const savedProfile = localStorage.getItem('userProfile');
+        if (savedProfile) {
+          try {
+            const profile = JSON.parse(savedProfile);
+            if (profile.weightKg) setWeight(profile.weightKg.toString());
+            if (profile.heightCm) setHeight(profile.heightCm.toString());
+            if (profile.birthDate) setDateOfBirth(profile.birthDate);
+            if (profile.gender) setGender(profile.gender);
+            if (profile.dailyCalories) setDailyCalories(profile.dailyCalories);
+          } catch (error) {
+            console.error('Error loading user profile from localStorage:', error);
+          }
+        }
       }
-    }
+    };
+    loadProfile();
   }, []);
 
   // Macronutrients State
@@ -84,23 +111,46 @@ export default function SettingsPage() {
     de: 'Deutsch',
   };
 
-  const handleSavePersonalDetails = () => {
-    // Сохраняем обновленные данные в localStorage
-    const savedProfile = localStorage.getItem('userProfile');
-    const currentProfile = savedProfile ? JSON.parse(savedProfile) : {};
-    
-    const updatedProfile = {
-      ...currentProfile,
-      weightKg: parseFloat(weight),
-      heightCm: parseFloat(height),
-      birthDate: dateOfBirth,
-      gender,
-    };
-    
-    localStorage.setItem('userProfile', JSON.stringify(updatedProfile));
-    console.log('Saving personal details:', updatedProfile);
-    
-    // TODO: Отправить на backend когда API будет готово
+  const handleSavePersonalDetails = async () => {
+    try {
+      // Подготавливаем данные для backend в формате UserProfile
+      const profileData: Partial<UserProfile> = {
+        birthDate: dateOfBirth,
+        gender: gender === 'male' ? 'Male' : 'Female',
+        height: parseFloat(height),
+        weight: parseFloat(weight),
+        weightGoal: parseFloat(weightGoal),
+        activityLevel: activityLevel,
+        dailyCalories: dailyCalories,
+        protein: parseInt(protein),
+        carbs: parseInt(carbs),
+        fats: parseInt(fat),
+      };
+      
+      console.log('💾 Saving personal details to backend:', profileData);
+      
+      // Отправляем на backend
+      await profileApi.saveProfile(profileData);
+      
+      console.log('✅ Personal details saved successfully');
+      
+      // Также сохраняем в localStorage как кэш
+      const localProfile = {
+        weightKg: parseFloat(weight),
+        heightCm: parseFloat(height),
+        birthDate: dateOfBirth,
+        gender,
+        weightGoal: parseFloat(weightGoal),
+        activityLevel,
+        dailyCalories,
+      };
+      localStorage.setItem('userProfile', JSON.stringify(localProfile));
+      
+      alert('Personal details saved successfully!');
+    } catch (error: any) {
+      console.error('❌ Error saving personal details:', error);
+      alert(`Failed to save personal details: ${error.message || 'Unknown error'}`);
+    }
   };
 
   const handleSaveMacros = () => {

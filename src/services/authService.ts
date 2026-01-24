@@ -23,22 +23,31 @@ const decodeJWT = (token: string): any => {
 
 class AuthService {
   async register(data: RegisterData): Promise<AuthResponse> {
+    console.log('🔐 REGISTER: Starting registration request...');
     const response = await authApi.post<AuthResponse>('/api/Auth/register', {
       fullName: data.name,
       email: data.email,
       password: data.password,
       confirmPassword: data.confirmPassword,
     });
-    console.log('REGISTER RESPONSE', response.data);
-    console.log('TOKENS', response.data.data);
+    console.log('🔐 REGISTER FULL RESPONSE:', response);
+    console.log('🔐 REGISTER RESPONSE DATA:', response.data);
+    console.log('🔐 REGISTER TOKENS:', response.data.data);
 
     const tokens = response.data.data;
     if (tokens?.accessToken && tokens?.refreshToken) {
+      console.log('✅ REGISTER: Tokens found, saving...');
       this.saveAuthData(tokens, response.data.user);
-      console.log('AFTER SAVE', {
+      console.log('✅ REGISTER: Saved to localStorage:', {
         authToken: localStorage.getItem('authToken'),
         refreshToken: localStorage.getItem('refreshToken'),
         user: localStorage.getItem('user')
+      });
+    } else {
+      console.error('❌ REGISTER: No tokens in response!', {
+        hasData: !!response.data.data,
+        hasAccessToken: !!tokens?.accessToken,
+        hasRefreshToken: !!tokens?.refreshToken
       });
     }
 
@@ -46,17 +55,26 @@ class AuthService {
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    console.log('🔐 LOGIN: Starting login request...');
     const response = await authApi.post<AuthResponse>('/api/Auth/login', credentials);
-    console.log('LOGIN RESPONSE', response.data);
-    console.log('TOKENS', response.data.data);
+    console.log('🔐 LOGIN FULL RESPONSE:', response);
+    console.log('🔐 LOGIN RESPONSE DATA:', response.data);
+    console.log('🔐 LOGIN TOKENS:', response.data.data);
 
     const tokens = response.data.data;
     if (tokens?.accessToken && tokens?.refreshToken) {
+      console.log('✅ LOGIN: Tokens found, saving...');
       this.saveAuthData(tokens, response.data.user);
-      console.log('AFTER SAVE', {
+      console.log('✅ LOGIN: Saved to localStorage:', {
         authToken: localStorage.getItem('authToken'),
         refreshToken: localStorage.getItem('refreshToken'),
         user: localStorage.getItem('user')
+      });
+    } else {
+      console.error('❌ LOGIN: No tokens in response!', {
+        hasData: !!response.data.data,
+        hasAccessToken: !!tokens?.accessToken,
+        hasRefreshToken: !!tokens?.refreshToken
       });
     }
 

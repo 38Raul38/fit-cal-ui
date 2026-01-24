@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { OnboardingData, CalorieCalculationResponse } from '@/types';
+import type { OnboardingData, CalorieCalculationResponse, UserProfile } from '@/types';
 
 // Настройка базовых URL для ваших ASP.NET backend проектов
 const AUTH_API_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5161';
@@ -25,6 +25,7 @@ export const api = axios.create({
 
 // Общая функция очистки auth данных
 const clearAuth = () => {
+  console.log('🧹 clearAuth called', new Error().stack);
   localStorage.removeItem('authToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
@@ -113,6 +114,42 @@ export const calorieApi = {
       await api.post('/api/profile/save', data);
     } catch (error: any) {
       console.error('Error saving profile:', error);
+      throw {
+        message: error.response?.data?.message || 'Failed to save profile',
+        errors: error.response?.data?.errors,
+      };
+    }
+  },
+};
+
+// API функции для профиля пользователя
+export const profileApi = {
+  getProfile: async (): Promise<UserProfile | null> => {
+    try {
+      console.log('🔍 Fetching profile from API...');
+      const response = await api.get<UserProfile>('/api/Profile');
+      console.log('✅ Profile loaded from API:', response.data);
+      return response.data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        console.log('⚠️ Profile not found (404), user needs to complete onboarding');
+        return null;
+      }
+      console.error('❌ Error fetching profile:', error.response?.data || error.message);
+      throw {
+        message: error.response?.data?.message || 'Failed to fetch profile',
+        errors: error.response?.data?.errors,
+      };
+    }
+  },
+
+  saveProfile: async (data: Partial<UserProfile>): Promise<void> => {
+    try {
+      console.log('💾 Saving profile to API:', data);
+      await api.post('/api/Profile/save', data);
+      console.log('✅ Profile saved successfully');
+    } catch (error: any) {
+      console.error('❌ Error saving profile:', error.response?.data || error.message);
       throw {
         message: error.response?.data?.message || 'Failed to save profile',
         errors: error.response?.data?.errors,

@@ -5,8 +5,8 @@ import { Target, CheckCircle2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { calorieApi } from '@/lib/api';
-import type { CalorieCalculationResponse } from '@/types';
+import { calorieApi, profileApi } from '@/lib/api';
+import type { CalorieCalculationResponse, UserProfile } from '@/types';
 
 export default function ResultsPage() {
   const navigate = useNavigate();
@@ -17,19 +17,85 @@ export default function ResultsPage() {
 
   useEffect(() => {
     const fetchCalorieData = async () => {
+      console.log('🎯 Results: Starting onboarding completion...');
+      
+      // Сначала проверяем, есть ли уже профиль в БД
+      try {
+        const existingProfile = await profileApi.getProfile();
+        
+        if (existingProfile) {
+          // Профиль уже существует, перенаправляем на dashboard
+          console.log('✅ Results: Profile already exists, redirecting to dashboard');
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+      } catch (err) {
+        console.log('⚠️ Results: No existing profile found, proceeding with onboarding');
+      }
+
+      // Если профиля нет, проверяем данные из onboarding
       const completeData = getCompleteData();
       
+      console.log('📝 Results: Onboarding data:', completeData);
+      
       if (!completeData) {
+        console.error('❌ Results: Missing onboarding data');
         setError('Missing onboarding data. Please complete all steps.');
         setIsLoading(false);
         return;
       }
 
       try {
+        // Сначала создаём профиль в backend БЕЗ калорий
+        const profileData: Partial<UserProfile> = {
+          birthDate: completeData.birthDate,
+          gender: completeData.gender === 0 ? 'Male' : 'Female',
+          height: completeData.heightCm,
+          weight: completeData.weightKg,
+          weightGoal: completeData.goalWeightKg || completeData.weightKg,
+          activityLevel: ['Sedentary', 'Light', 'Moderate', 'Active'][completeData.activityLevel] || 'Moderate',
+          dailyCalories: 2000, // Временное значение, обновим после расчёта
+          protein: 150,
+          carbs: 200,
+          fats: 67,
+        };
+        
+        console.log('💾 Results: Saving profile to backend first:', profileData);
+        
+        try {
+          await profileApi.saveProfile(profileData);
+          console.log('✅ Results: Profile saved to backend successfully');
+        } catch (saveError: any) {
+          console.error('❌ Results: Error saving profile to backend:', saveError);
+          throw new Error('Failed to save profile. Please try again.');
+        }
+        
+        // ТЕПЕРЬ вычисляем калории (профиль уже создан в БД)
+        console.log('🧮 Results: Calculating calories...');
         const response = await calorieApi.calculateDailyCalories(completeData);
+        console.log('✅ Results: Calories calculated:', response);
         setCalorieData(response);
         
-        // Сохраняем данные пользователя в localStorage
+        // Обновляем профиль с правильными калориями
+        const updatedProfileData = {
+          ...profileData,
+          dailyCalories: response.dailyCalories,
+          protein: Math.round((response.dailyCalories * 0.3) / 4),
+          carbs: Math.round((response.dailyCalories * 0.4) / 4),
+          fats: Math.round((response.dailyCalories * 0.3) / 9),
+        };
+        
+        console.log('🔄 Results: Updating profile with calculated calories:', updatedProfileData);
+        
+        try {
+          await profileApi.saveProfile(updatedProfileData);
+          console.log('✅ Results: Profile updated with calories successfully');
+        } catch (updateError: any) {
+          console.error('❌ Results: Error updating profile with calories:', updateError);
+          // Не критично, калории уже рассчитаны
+        }
+        
+        // Также сохраняем в localStorage как кэш
         const userProfile = {
           weightKg: completeData.weightKg,
           heightCm: completeData.heightCm,
@@ -40,12 +106,6 @@ export default function ResultsPage() {
           dailyCalories: response.dailyCalories,
         };
         localStorage.setItem('userProfile', JSON.stringify(userProfile));
-        
-        // TODO: Сохранение профиля, когда endpoint будет готов
-        // await calorieApi.saveUserProfile({
-        //   ...completeData,
-        //   dailyCalories: response.dailyCalories,
-        // });
       } catch (err: any) {
         console.error('Error fetching calorie data:', err);
         setError(err.message || 'Failed to calculate calories. Please try again.');
@@ -55,7 +115,7 @@ export default function ResultsPage() {
     };
 
     fetchCalorieData();
-  }, [getCompleteData]);
+  }, [getCompleteData, navigate]);
 
   const containerVariants = {
     hidden: { opacity: 0 },

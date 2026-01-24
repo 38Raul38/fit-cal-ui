@@ -7,6 +7,7 @@ import { Label, PolarRadiusAxis, RadialBar, RadialBarChart } from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { getTodayMeals } from '@/lib/mealStorage';
 import { getTodayWater, addWaterGlass, removeWaterGlass, getWaterGoal } from '@/lib/waterStorage';
+import { profileApi } from '@/lib/api';
 
 interface DayData {
   caloriesLeft: number;
@@ -22,6 +23,7 @@ interface DayData {
 export default function DashboardPage() {
   const { t } = useTranslation();
   const [waterGlasses, setWaterGlasses] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const waterGoal = getWaterGoal();
   
   const [currentData, setCurrentData] = useState<DayData>({
@@ -36,73 +38,142 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    // Получаем данные профиля пользователя
-    const savedProfile = localStorage.getItem('userProfile');
-    let dailyCalories = 2400;
-    
-    if (savedProfile) {
+    const loadDashboardData = async () => {
+      setIsLoading(true);
+      
+      console.log('📊 Dashboard: Loading data...');
+      
       try {
-        const profile = JSON.parse(savedProfile);
-        dailyCalories = profile.dailyCalories || 2400;
+        // Получаем профиль пользователя из API
+        const profile = await profileApi.getProfile();
+        
+        console.log('📊 Dashboard: Profile received:', profile);
+        
+        let dailyCalories = 2400;
+        let proteinPercent = 30;
+        let carbsPercent = 40;
+        let fatPercent = 30;
+        
+        if (profile) {
+          // Используем данные из backend
+          dailyCalories = profile.dailyCalories || 2400;
+          
+          // Рассчитываем проценты макронутриентов из граммов
+          const totalProteinGrams = profile.protein || 0;
+          const totalCarbsGrams = profile.carbs || 0;
+          const totalFatGrams = profile.fats || 0;
+          
+          // Если в профиле есть макросы в граммах, пересчитываем проценты
+          if (totalProteinGrams > 0 || totalCarbsGrams > 0 || totalFatGrams > 0) {
+            const proteinCals = totalProteinGrams * 4;
+            const carbsCals = totalCarbsGrams * 4;
+            const fatCals = totalFatGrams * 9;
+            const totalMacroCals = proteinCals + carbsCals + fatCals;
+            
+            if (totalMacroCals > 0) {
+              proteinPercent = (proteinCals / totalMacroCals) * 100;
+              carbsPercent = (carbsCals / totalMacroCals) * 100;
+              fatPercent = (fatCals / totalMacroCals) * 100;
+            }
+          }
+          
+          // Сохраняем в localStorage как кэш
+          localStorage.setItem('userProfile', JSON.stringify({
+            dailyCalories: profile.dailyCalories,
+            protein: profile.protein,
+            carbs: profile.carbs,
+            fats: profile.fats,
+          }));
+        } else {
+          // Если профиля нет в API, пробуем загрузить из localStorage (кэш)
+          const savedProfile = localStorage.getItem('userProfile');
+          if (savedProfile) {
+            try {
+              const cachedProfile = JSON.parse(savedProfile);
+              dailyCalories = cachedProfile.dailyCalories || 2400;
+            } catch (error) {
+              console.error('Error loading cached profile:', error);
+            }
+          }
+          
+          // Загружаем настройки макронутриентов из localStorage
+          const savedMacros = localStorage.getItem('macroSettings');
+          if (savedMacros) {
+            try {
+              const macros = JSON.parse(savedMacros);
+              proteinPercent = macros.protein || 30;
+              carbsPercent = macros.carbs || 40;
+              fatPercent = macros.fat || 30;
+            } catch (error) {
+              console.error('Error loading macros:', error);
+            }
+          }
+        }
+
+        // Рассчитываем рекомендуемые макросы
+        const totalProtein = Math.round((dailyCalories * (proteinPercent / 100)) / 4);
+        const totalCarbs = Math.round((dailyCalories * (carbsPercent / 100)) / 4);
+        const totalFat = Math.round((dailyCalories * (fatPercent / 100)) / 9);
+
+        // Получаем съеденные продукты за сегодня
+        const todayMeals = getTodayMeals();
+        
+        // Суммируем калории и макросы
+        let consumedCalories = 0;
+        let consumedProtein = 0;
+        let consumedCarbs = 0;
+        let consumedFat = 0;
+
+        todayMeals.forEach(meal => {
+          meal.items.forEach(item => {
+            consumedCalories += item.calories;
+            consumedProtein += item.protein;
+            consumedCarbs += item.carbs;
+            consumedFat += item.fat;
+          });
+        });
+
+        // Рассчитываем остаток
+        setCurrentData({
+          caloriesLeft: Math.max(0, dailyCalories - consumedCalories),
+          totalCalories: dailyCalories,
+          proteinLeft: Math.max(0, totalProtein - consumedProtein),
+          totalProtein,
+          carbsLeft: Math.max(0, totalCarbs - consumedCarbs),
+          totalCarbs,
+          fatLeft: Math.max(0, totalFat - consumedFat),
+          totalFat,
+        });
+
+        // Загружаем воду
+        setWaterGlasses(getTodayWater());
       } catch (error) {
-        console.error('Error loading user profile:', error);
+        console.error('Error loading dashboard data:', error);
+        
+        // В случае ошибки используем данные из localStorage
+        const savedProfile = localStorage.getItem('userProfile');
+        let dailyCalories = 2400;
+        
+        if (savedProfile) {
+          try {
+            const profile = JSON.parse(savedProfile);
+            dailyCalories = profile.dailyCalories || 2400;
+          } catch (e) {
+            console.error('Error parsing cached profile:', e);
+          }
+        }
+        
+        setCurrentData(prev => ({
+          ...prev,
+          totalCalories: dailyCalories,
+          caloriesLeft: dailyCalories,
+        }));
+      } finally {
+        setIsLoading(false);
       }
-    }
+    };
 
-    // Загружаем настройки макронутриентов из localStorage
-    let proteinPercent = 30;
-    let carbsPercent = 40;
-    let fatPercent = 30;
-    
-    const savedMacros = localStorage.getItem('macroSettings');
-    if (savedMacros) {
-      try {
-        const macros = JSON.parse(savedMacros);
-        proteinPercent = macros.protein || 30;
-        carbsPercent = macros.carbs || 40;
-        fatPercent = macros.fat || 30;
-      } catch (error) {
-        console.error('Error loading macros:', error);
-      }
-    }
-
-    // Рассчитываем рекомендуемые макросы на основе сохраненных настроек
-    const totalProtein = Math.round((dailyCalories * (proteinPercent / 100)) / 4); // 1g белка = 4 kcal
-    const totalCarbs = Math.round((dailyCalories * (carbsPercent / 100)) / 4); // 1g углеводов = 4 kcal
-    const totalFat = Math.round((dailyCalories * (fatPercent / 100)) / 9); // 1g жира = 9 kcal
-
-    // Получаем съеденные продукты за сегодня
-    const todayMeals = getTodayMeals();
-    
-    // Суммируем калории и макросы
-    let consumedCalories = 0;
-    let consumedProtein = 0;
-    let consumedCarbs = 0;
-    let consumedFat = 0;
-
-    todayMeals.forEach(meal => {
-      meal.items.forEach(item => {
-        consumedCalories += item.calories;
-        consumedProtein += item.protein;
-        consumedCarbs += item.carbs;
-        consumedFat += item.fat;
-      });
-    });
-
-    // Рассчитываем остаток
-    setCurrentData({
-      caloriesLeft: Math.max(0, dailyCalories - consumedCalories),
-      totalCalories: dailyCalories,
-      proteinLeft: Math.max(0, totalProtein - consumedProtein),
-      totalProtein,
-      carbsLeft: Math.max(0, totalCarbs - consumedCarbs),
-      totalCarbs,
-      fatLeft: Math.max(0, totalFat - consumedFat),
-      totalFat,
-    });
-
-    // Загружаем воду
-    setWaterGlasses(getTodayWater());
+    loadDashboardData();
   }, []);
   
   const handleAddWater = () => {
@@ -148,6 +219,21 @@ export default function DashboardPage() {
   const fatChartConfig = {
     value: { label: 'Fat', color: 'hsl(199, 89%, 48%)' }
   } satisfies ChartConfig;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading your dashboard...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 pb-24">
