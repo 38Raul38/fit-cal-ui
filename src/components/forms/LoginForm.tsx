@@ -75,10 +75,32 @@ export default function LoginForm() {
     setApiError('');
     
     try {
+      console.log('🔐 [LoginForm] Starting Google login...');
       await authService.loginWithGoogle(credentialResponse.credential);
-      navigate('/dashboard');
+      
+      // Даем время на сохранение токена
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Проверяем, что токен действительно сохранился
+      const token = localStorage.getItem('authToken');
+      const user = localStorage.getItem('user');
+      console.log('🔐 [LoginForm] After Google login:', {
+        hasToken: !!token,
+        hasUser: !!user,
+        token: token?.substring(0, 20) + '...',
+        user: user
+      });
+      
+      if (!token) {
+        throw new Error('Token not saved after Google login');
+      }
+      
+      console.log('🔐 [LoginForm] Navigating to dashboard...');
+      
+      // Используем replace вместо push для предотвращения возврата назад
+      navigate('/dashboard', { replace: true });
     } catch (error: any) {
-      console.error('Google login error:', error);
+      console.error('❌ [LoginForm] Google login error:', error);
       setApiError(error.message || 'Failed to login with Google. Please try again.');
     } finally {
       setIsLoading(false);
@@ -252,6 +274,12 @@ export default function LoginForm() {
         Don't have an account?{' '}
         <Link to="/register" className="text-primary font-medium hover:underline">
           Sign up
+        </Link>
+      </motion.div>
+
+      <motion.div variants={itemVariants} className="text-center text-sm">
+        <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
+          ← Back to Home
         </Link>
       </motion.div>
     </motion.div>

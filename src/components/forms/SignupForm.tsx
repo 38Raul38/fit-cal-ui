@@ -65,10 +65,23 @@ export default function SignupForm() {
     setApiError('');
     
     try {
+      console.log('🔐 [SignupForm] Starting Google signup...');
       await authService.loginWithGoogle(credentialResponse.credential);
-      navigate('/onboarding');
+      
+      // Даем время на сохранение токена
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Проверяем, что токен действительно сохранился
+      const token = localStorage.getItem('authToken');
+      console.log('🔐 [SignupForm] After Google signup, hasToken:', !!token);
+      
+      if (!token) {
+        throw new Error('Token not saved after Google signup');
+      }
+      
+      navigate('/onboarding', { replace: true });
     } catch (error: any) {
-      console.error('Google signup error:', error);
+      console.error('❌ [SignupForm] Google signup error:', error);
       setApiError(error.message || 'Failed to sign up with Google. Please try again.');
     } finally {
       setIsLoading(false);

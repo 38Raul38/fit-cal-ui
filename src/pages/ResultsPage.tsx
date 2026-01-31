@@ -67,7 +67,13 @@ export default function ResultsPage() {
           console.log('✅ Results: Profile saved to backend successfully');
         } catch (saveError: any) {
           console.error('❌ Results: Error saving profile to backend:', saveError);
-          throw new Error('Failed to save profile. Please try again.');
+          console.error('❌ Results: Error details:', {
+            message: saveError?.message,
+            errors: saveError?.errors,
+            response: saveError?.response?.data
+          });
+          // Не выбрасываем ошибку, продолжаем выполнение
+          console.log('⚠️ Results: Continuing despite profile save error...');
         }
         
         // ТЕПЕРЬ вычисляем калории (профиль уже создан в БД)
@@ -245,7 +251,7 @@ export default function ResultsPage() {
                 <Target className="w-12 h-12 text-primary" strokeWidth={1.5} />
               </div>
               <p className="text-sm sm:text-base text-muted-foreground mb-2">
-                {calorieData.planText}
+                Lose weight
               </p>
               <div className="flex items-baseline justify-center gap-2 mb-2">
                 <span className="text-6xl sm:text-7xl font-bold text-foreground">
@@ -255,9 +261,7 @@ export default function ResultsPage() {
                   {calorieData.unitLabel}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Цель: {calorieData.goal}
-              </p>
+              {/* Goal removed as requested */}
             </CardContent>
           </Card>
         </motion.div>

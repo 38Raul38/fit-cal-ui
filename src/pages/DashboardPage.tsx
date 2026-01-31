@@ -41,13 +41,19 @@ export default function DashboardPage() {
     const loadDashboardData = async () => {
       setIsLoading(true);
       
-      console.log('📊 Dashboard: Loading data...');
+      console.log('📊 [Dashboard] Starting to load data...');
+      console.log('📊 [Dashboard] localStorage state:', {
+        hasAuthToken: !!localStorage.getItem('authToken'),
+        hasUser: !!localStorage.getItem('user'),
+        tokenPreview: localStorage.getItem('authToken')?.substring(0, 20) + '...'
+      });
       
       try {
         // Получаем профиль пользователя из API
+        console.log('📊 [Dashboard] Calling profileApi.getProfile()...');
         const profile = await profileApi.getProfile();
         
-        console.log('📊 Dashboard: Profile received:', profile);
+        console.log('📊 [Dashboard] Profile received:', profile);
         
         let dailyCalories = 2400;
         let proteinPercent = 30;

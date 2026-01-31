@@ -68,6 +68,10 @@
   },
   "settings": {
     "title": "Настройки",
+    "accountInformation": "Информация об аккаунте",
+    "fullName": "Полное имя",
+    "email": "Email",
+    "accountInfoNote": "Чтобы изменить email или пароль, используйте раздел Безопасность аккаунта ниже.",
     "personalDetails": "Личные данные",
     "currentWeight": "Текущий вес (кг)",
     "height": "Рост (см)",
@@ -88,13 +92,43 @@
     "appearance": "Оформление",
     "light": "Светлая",
     "dark": "Темная",
-    "logout": "Выйти"
+    "accountSecurity": "Безопасность аккаунта",
+    "accountSecurityDescription": "Управляйте своим паролем и адресом электронной почты",
+    "password": "Пароль",
+    "passwordDescription": "Измените пароль своего аккаунта",
+    "emailAddress": "Адрес электронной почты",
+    "noEmail": "Email не указан",
+    "change": "Изменить",
+    "changePassword": "Изменить пароль",
+    "changeEmail": "Изменить Email",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirmNewPassword": "Подтвердите новый пароль",
+    "currentEmail": "Текущий Email",
+    "newEmail": "Новый Email",
+    "passwordConfirm": "Пароль (для подтверждения)",
+    "enterPasswordToConfirm": "Введите пароль для подтверждения",
+    "logout": "Выйти",
+    "errors": {
+      "allFieldsRequired": "Все поля обязательны",
+      "passwordTooShort": "Пароль должен содержать минимум 6 символов",
+      "passwordsDoNotMatch": "Пароли не совпадают",
+      "passwordChangeFailed": "Не удалось изменить пароль",
+      "invalidEmail": "Неверный адрес электронной почты",
+      "sameEmail": "Новый email должен отличаться от текущего",
+      "emailChangeFailed": "Не удалось изменить email"
+    },
+    "success": {
+      "passwordChanged": "Пароль успешно изменен!",
+      "emailChanged": "Email успешно изменен!"
+    }
   },
   "common": {
     "save": "Сохранить",
     "cancel": "Отмена",
     "delete": "Удалить",
     "edit": "Редактировать",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "saving": "Сохранение..."
   }
 }

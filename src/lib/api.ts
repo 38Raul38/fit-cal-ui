@@ -2,8 +2,10 @@ import axios from 'axios';
 import type { OnboardingData, CalorieCalculationResponse, UserProfile } from '@/types';
 
 // Настройка базовых URL для ваших ASP.NET backend проектов
-const AUTH_API_URL = import.meta.env.VITE_AUTH_API_URL || 'http://localhost:5161';
-const FITCAL_API_URL = import.meta.env.VITE_FITCAL_API_URL || 'http://localhost:5210';
+const AUTH_API_URL = import.meta.env.VITE_AUTH_API_URL;
+const FITCAL_API_URL = import.meta.env.VITE_FITCAL_API_URL;
+
+console.log(AUTH_API_URL, FITCAL_API_URL);
 
 // Auth API instance (для регистрации и логина)
 export const authApi = axios.create({
@@ -39,6 +41,10 @@ const isAuthEndpoint = (url?: string) =>
 authApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
+    console.log(`📡 [AUTH Request] ${config.method?.toUpperCase()} ${config.url}`, {
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+    });
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -51,13 +57,22 @@ authApi.interceptors.request.use(
 
 // Interceptor для обработки ответов Auth API
 authApi.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ [AUTH Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status
+    });
+    return response;
+  },
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url;
+    console.log(`❌ [AUTH Error] ${error.config?.method?.toUpperCase()} ${url}`, {
+      status,
+      message: error.response?.data?.message || error.message
+    });
 
     if (status === 401 && !isAuthEndpoint(url)) {
-      console.log('Auth API: 401 detected, clearing auth data');
+      console.log('🚪 Auth API: 401 detected, clearing auth data');
       clearAuth();
       window.location.href = '/login';
     }
@@ -70,6 +85,10 @@ authApi.interceptors.response.use(
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
+    console.log(`📡 [API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+    });
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -82,11 +101,20 @@ api.interceptors.request.use(
 
 // Interceptor для обработки ответов FitCal API
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ [API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status
+    });
+    return response;
+  },
   (error) => {
     const status = error.response?.status;
+    console.log(`❌ [API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+      status,
+      message: error.response?.data?.message || error.message
+    });
     if (status === 401) {
-      console.log('FitCal API: 401 detected, clearing auth data');
+      console.log('🚪 FitCal API: 401 detected, clearing auth data');
       clearAuth();
       window.location.href = '/login';
     }

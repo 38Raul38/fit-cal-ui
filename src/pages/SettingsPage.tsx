@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/Button';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, User, Palette, Globe, Activity } from 'lucide-react';
+import { LogOut, User, Palette, Globe, Activity, Lock, Mail } from 'lucide-react';
 import { authService } from '@/services/authService';
 import { profileApi } from '@/lib/api';
 import type { UserProfile } from '@/types';
+import ChangePasswordDialog from '@/components/ChangePasswordDialog';
+import ChangeEmailDialog from '@/components/ChangeEmailDialog';
 
 type Language = 'en' | 'az' | 'ru' | 'de' | 'es';
 type Theme = 'light' | 'dark';
@@ -36,14 +38,45 @@ export default function SettingsPage() {
         if (profile) {
           setWeight(profile.weight.toString());
           setHeight(profile.height.toString());
-          setDateOfBirth(profile.birthDate);
+          if (profile.birthDate) {
+            // Конвертируем дату из ISO формата (2026-01-26T17:28:20.194Z) в YYYY-MM-DD
+            const date = new Date(profile.birthDate);
+            const formattedDate = date.toISOString().split('T')[0];
+            setDateOfBirth(formattedDate);
+          }
           setGender(profile.gender.toLowerCase() as Gender);
           setWeightGoal(profile.weightGoal.toString());
           setActivityLevel(profile.activityLevel);
           setDailyCalories(profile.dailyCalories);
-          setProtein(profile.protein.toString());
-          setCarbs(profile.carbs.toString());
-          setFat(profile.fats.toString());
+          
+          // Рассчитываем проценты макронутриентов из граммов
+          const totalProteinGrams = profile.protein || 0;
+          const totalCarbsGrams = profile.carbs || 0;
+          const totalFatGrams = profile.fats || 0;
+          
+          if (totalProteinGrams > 0 || totalCarbsGrams > 0 || totalFatGrams > 0) {
+            // Конвертируем граммы в калории
+            const proteinCals = totalProteinGrams * 4;
+            const carbsCals = totalCarbsGrams * 4;
+            const fatCals = totalFatGrams * 9;
+            const totalMacroCals = proteinCals + carbsCals + fatCals;
+            
+            if (totalMacroCals > 0) {
+              // Рассчитываем проценты
+              const proteinPercent = Math.round((proteinCals / totalMacroCals) * 100);
+              const carbsPercent = Math.round((carbsCals / totalMacroCals) * 100);
+              const fatPercent = Math.round((fatCals / totalMacroCals) * 100);
+              
+              setProtein(proteinPercent.toString());
+              setCarbs(carbsPercent.toString());
+              setFat(fatPercent.toString());
+            }
+          } else {
+            // Если нет данных о макросах, оставляем дефолтные значения
+            setProtein('30');
+            setCarbs('40');
+            setFat('30');
+          }
         }
       } catch (error) {
         console.error('Error loading profile from API:', error);
@@ -89,6 +122,23 @@ export default function SettingsPage() {
   // Preferences State
   const [language, setLanguage] = useState<Language>(i18n.language as Language || 'en');
   const [theme, setTheme] = useState<Theme>('light');
+
+  // Dialog States
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isChangeEmailOpen, setIsChangeEmailOpen] = useState(false);
+
+  // User data State
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+
+  // Load user data
+  useEffect(() => {
+    const user = authService.getUser();
+    if (user) {
+      setUserName(user.name || '');
+      setUserEmail(user.email || '');
+    }
+  }, []);
 
   // Загрузка темы из localStorage при монтировании
   useEffect(() => {
@@ -205,11 +255,48 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <h1 className="text-3xl sm:text-4xl font-bold mb-8">{t('settings.title')}</h1>
 
-        {/* Personal Details */}
+        {/* Account Information */}
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-xl">{t('settings.accountInformation')}</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="userName">{t('settings.fullName')}</Label>
+                <Input
+                  id="userName"
+                  type="text"
+                  value={userName}
+                  disabled
+                  className="mt-1.5 bg-muted"
+                />
+              </div>
+              <div>
+                <Label htmlFor="userEmail">{t('settings.email')}</Label>
+                <Input
+                  id="userEmail"
+                  type="email"
+                  value={userEmail}
+                  disabled
+                  className="mt-1.5 bg-muted"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t('settings.accountInfoNote')}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Personal Details */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-muted-foreground" />
               <CardTitle className="text-xl">{t('settings.personalDetails')}</CardTitle>
             </div>
           </CardHeader>
@@ -405,6 +492,52 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Account Security */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-muted-foreground" />
+              <CardTitle className="text-xl">{t('settings.accountSecurity')}</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('settings.accountSecurityDescription')}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Lock className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{t('settings.password')}</p>
+                  <p className="text-sm text-muted-foreground">{t('settings.passwordDescription')}</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsChangePasswordOpen(true)}
+              >
+                {t('settings.change')}
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Mail className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{t('settings.emailAddress')}</p>
+                  <p className="text-sm text-muted-foreground">{userEmail || t('settings.noEmail')}</p>
+                </div>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsChangeEmailOpen(true)}
+              >
+                {t('settings.change')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Logout */}
         <Card>
           <CardContent className="pt-6">
@@ -420,6 +553,28 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialogs */}
+      <ChangePasswordDialog 
+        isOpen={isChangePasswordOpen} 
+        onClose={() => setIsChangePasswordOpen(false)}
+        onSuccess={() => {
+          console.log('Password changed successfully');
+        }}
+      />
+      <ChangeEmailDialog 
+        isOpen={isChangeEmailOpen} 
+        onClose={() => setIsChangeEmailOpen(false)}
+        currentEmail={userEmail}
+        onSuccess={() => {
+          console.log('Email changed successfully');
+          // Refresh user data
+          const updatedUser = authService.getUser();
+          if (updatedUser) {
+            setUserEmail(updatedUser.email || '');
+          }
+        }}
+      />
     </div>
   );
 }

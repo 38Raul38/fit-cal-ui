@@ -309,8 +309,8 @@ export default function DailyMealsPage() {
                     <Apple className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
                     <p className="text-sm text-muted-foreground">
                       {isToday(selectedDate) 
-                        ? t('dailyMeals.noMealsToday') || 'No meals added yet' 
-                        : t('dailyMeals.noMealsThisDay') || `No meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                        ? 'No Meals Today' 
+                        : `No meals for ${selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
                       }
                     </p>
                   </div>

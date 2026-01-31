@@ -68,6 +68,10 @@
   },
   "settings": {
     "title": "Settings",
+    "accountInformation": "Account Information",
+    "fullName": "Full Name",
+    "email": "Email",
+    "accountInfoNote": "To change your email or password, use the Account Security section below.",
     "personalDetails": "Personal Details",
     "currentWeight": "Current Weight (kg)",
     "height": "Height (cm)",
@@ -88,13 +92,43 @@
     "appearance": "Appearance",
     "light": "Light",
     "dark": "Dark",
-    "logout": "Logout"
+    "accountSecurity": "Account Security",
+    "accountSecurityDescription": "Manage your password and email address",
+    "password": "Password",
+    "passwordDescription": "Change your account password",
+    "emailAddress": "Email Address",
+    "noEmail": "No email set",
+    "change": "Change",
+    "changePassword": "Change Password",
+    "changeEmail": "Change Email",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "currentEmail": "Current Email",
+    "newEmail": "New Email",
+    "passwordConfirm": "Password (to confirm)",
+    "enterPasswordToConfirm": "Enter your password to confirm",
+    "logout": "Logout",
+    "errors": {
+      "allFieldsRequired": "All fields are required",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordChangeFailed": "Failed to change password",
+      "invalidEmail": "Invalid email address",
+      "sameEmail": "New email must be different from current email",
+      "emailChangeFailed": "Failed to change email"
+    },
+    "success": {
+      "passwordChanged": "Password changed successfully!",
+      "emailChanged": "Email changed successfully!"
+    }
   },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "close": "Close"
+    "close": "Close",
+    "saving": "Saving..."
   }
 }
